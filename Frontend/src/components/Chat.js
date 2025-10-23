@@ -8,7 +8,7 @@ import YouTubeSearchModal from "./YouTubeSearchModal";
 import EmojiGifPicker from "./EmojiGifPicker";
 import { FaSmile } from "react-icons/fa";
 import { FaMicrophone } from "react-icons/fa";
-
+require("dotenv").config();
 
 
 
@@ -28,14 +28,14 @@ export default function Chat() {
 const [mediaRecorder, setMediaRecorder] = useState(null);
 const [audioChunks, setAudioChunks] = useState([]);
 
-
+const API_URL = process.env.REACT_APP_API_URL;
 
   // Fetch messages on load
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/messages/${groupId}`,
+          `${API_URL}/api/messages/${groupId}`,
           authHeader
         );
         setMessages(res.data);
@@ -50,7 +50,7 @@ const [audioChunks, setAudioChunks] = useState([]);
   const postMessage = async (payload) => {
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/messages/${groupId}`,
+        `${API_URL}/messages/${groupId}`,
         payload,
         authHeader
       );
@@ -71,7 +71,7 @@ const [audioChunks, setAudioChunks] = useState([]);
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await axios.post("http://localhost:5000/api/upload", fd, {
+      const res = await axios.post(`${API_URL}/upload`, fd, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -190,20 +190,20 @@ const toggleRecording = async () => {
   <div style={{ marginTop: msg.text ? 6 : 2 }}>
     {msg.media.mimetype?.startsWith("image/") ? (
       <img
-        src={msg.media.external ? msg.media.url : `http://localhost:5000${msg.media.url}`}
+        src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
         alt="media"
         style={{ maxWidth: 300, borderRadius: 6 }}
       />
     ) : msg.media.mimetype?.startsWith("video/") ? (
       <video
         controls
-        src={msg.media.external ? msg.media.url : `http://localhost:5000${msg.media.url}`}
+        src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
         style={{ maxWidth: 360 }}
       />
     ) : msg.media.mimetype?.startsWith("audio/") ? (
       <audio
         controls
-        src={msg.media.external ? msg.media.url : `http://localhost:5000${msg.media.url}`}
+        src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
         style={{ width: 250 }}
       />
     ) : null}
@@ -261,7 +261,7 @@ const toggleRecording = async () => {
         onClick={async () => {
           try {
             const res = await axios.post(
-              `http://localhost:5000/api/messages/${msg._id}/react`,
+              `${API_URL}/messages/${msg._id}/react`,
               { type },
               authHeader
             );
