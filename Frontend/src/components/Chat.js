@@ -8,7 +8,7 @@ import YouTubeSearchModal from "./YouTubeSearchModal";
 import EmojiGifPicker from "./EmojiGifPicker";
 import { FaSmile } from "react-icons/fa";
 import { FaMicrophone } from "react-icons/fa";
-require("dotenv").config();
+
 
 
 
