@@ -28,7 +28,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", authRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api/upload", uploadRoutes); // <— make sure this comes AFTER express.json()
+app.use("/upload", uploadRoutes); // <— make sure this comes AFTER express.json()
 
 app.get("/", (req, res) => {
   res.send("✅ Backend is running successfully on Render!");
