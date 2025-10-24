@@ -35,7 +35,7 @@ const API_URL = process.env.REACT_APP_API_URL;
     const fetchMessages = async () => {
       try {
         const res = await axios.get(
-          `${API_URL}/api/messages/${groupId}`,
+          `${API_URL}/messages/${groupId}`,
           authHeader
         );
         setMessages(res.data);
