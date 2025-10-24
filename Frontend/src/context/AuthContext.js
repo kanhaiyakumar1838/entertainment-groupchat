@@ -34,6 +34,9 @@ export const AuthContextProvider = ({ children }) => {
   // Logout function
   const logout = () => {
     if (typeof window !== "undefined") {
+      localStorage.removeItem("groupId");
+      // setMessages([]);
+
       localStorage.clear();
     }
     setUser(null);
