@@ -11,12 +11,18 @@ export default function GroupList() {
   const [description, setDescription] = useState("");
 
   useEffect(() => {
-    const fetchGroups = async () => {
-      const res = await axios.get("/groups");
+  const fetchGroups = async () => {
+    try {
+      const res = await axios.get("/groups", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
       setGroups(res.data);
-    };
-    fetchGroups();
-  }, []);
+    } catch (err) {
+      console.error("Error fetching groups:", err);
+    }
+  };
+  fetchGroups();
+}, []);
 
   const createGroup = async () => {
     if (!name) return;
