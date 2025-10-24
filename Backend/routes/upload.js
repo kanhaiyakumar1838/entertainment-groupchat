@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const { v2: cloudinary } = require("cloudinary");
-const fs = require("fs-extra");
+const streamifier = require("streamifier");
 require("dotenv").config();
 
 // ✅ Cloudinary config
@@ -12,8 +12,23 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ Use multer to handle file uploads (in memory)
-const upload = multer({ dest: "temp/" });
+// ✅ Multer in-memory storage (no temp files)
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// ✅ Helper: upload buffer to Cloudinary
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { resource_type: "auto", folder: "groupchat_uploads" },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
 
 // ✅ Upload route
 router.post("/", upload.single("file"), async (req, res) => {
@@ -21,17 +36,12 @@ router.post("/", upload.single("file"), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
     // Upload file to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "auto", // auto-detects image/video/audio
-      folder: "groupchat_uploads",
-    });
-
-    // Remove temp file after upload
-    await fs.remove(req.file.path);
+    const result = await uploadToCloudinary(req.file.buffer);
 
     res.json({
-      url: result.secure_url,
-      mimetype: req.file.mimetype,
+      url: result.secure_url,           // full Cloudinary URL
+      mimetype: req.file.mimetype,      // file type
+      external: true                     // tells frontend not to prepend API_URL
     });
   } catch (err) {
     console.error("Cloudinary upload error:", err);
