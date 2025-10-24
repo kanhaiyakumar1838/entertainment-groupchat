@@ -77,7 +77,7 @@ const API_URL = process.env.REACT_APP_API_URL;
           "Content-Type": "multipart/form-data",
         },
       });
-      const media = { url: res.data.url, mimetype: res.data.mimetype };
+      const media = { url: res.data.url, mimetype: res.data.mimetype, external: true };
       await postMessage({ text: "", media });
     } catch (err) {
       console.error("Upload error:", err);
@@ -209,6 +209,7 @@ const toggleRecording = async () => {
     ) : null}
   </div>
 )}
+
 
 
 
