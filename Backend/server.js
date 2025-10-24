@@ -30,6 +30,15 @@ app.use("/api/groups", groupRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/upload", uploadRoutes); // <— make sure this comes AFTER express.json()
 
+app.get("/", (req, res) => {
+  res.send("✅ Backend is running successfully on Render!");
+});
+
+
+app.get("/api/test", (req, res) => {
+  res.json({ message: "✅ API is running successfully on Render!" });
+});
+
 // ✅ MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI, {
