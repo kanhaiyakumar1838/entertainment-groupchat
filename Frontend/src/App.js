@@ -15,7 +15,7 @@ function App() {
   console.log(localStorage.getItem("user"));
     const location = useLocation();
   const showNavbar = !["/login", "/register"].includes(location.pathname);
-  //localStorage.clear();
+  localStorage.clear();
   
  
 
