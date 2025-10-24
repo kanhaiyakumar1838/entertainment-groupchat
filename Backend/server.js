@@ -26,7 +26,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ✅ Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/groups", groupRoutes);
+app.use("/groups", groupRoutes);
 app.use("/messages", messageRoutes);
 app.use("/upload", uploadRoutes); // <— make sure this comes AFTER express.json()
 
