@@ -15,14 +15,17 @@ const Navbar = () => {
     headers: { Authorization: `Bearer ${user?.token}` } // assuming your context stores token
   };
 
-  const fetchProfile = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/user/me`, authHeader);
-      setProfile(res.data);
-    } catch (err) {
-      console.error("Error fetching profile:", err);
-    }
-  };
+const fetchProfile = async () => {
+  try {
+    const res = await axios.get(`${API_URL}/user/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setProfile(res.data);
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+  }
+};
+
 
   const handleLogout = () => {
     logout();           // update context + clear localStorage
