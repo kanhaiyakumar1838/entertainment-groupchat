@@ -309,125 +309,133 @@ const toggleRecording = async () => {
         ))}
       </div>
 
-      {/* Input + Options */}
+// Replace your input + options section with this
+<div
+  style={{
+    display: "flex",
+    gap: 4,          // slightly smaller gap
+    marginTop: 12,
+    alignItems: "flex-end",
+    width: "100%",
+    overflow: "hidden", // prevent horizontal scroll
+  }}
+>
+  <div style={{ position: "relative" }}>
+    <button
+      onClick={() => setShowMenu(!showMenu)}
+      style={{ padding: 6, borderRadius: 8 }}
+    >
+      <FaPlus />
+    </button>
+
+    {showMenu && (
       <div
         style={{
-    display: "flex",
-    gap: 8,
-    marginTop: 12,
-    alignItems: "flex-end", // aligns bottom edges
-    width: "100%",
-    overflow: "hidden", // prevents horizontal scroll
-  }}
+          position: "absolute",
+          top: 38,
+          left: 0,
+          background: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: 8,
+          padding: 6,
+          zIndex: 50,
+        }}
       >
-        <div style={{ position: "relative" }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          <label style={menuItemStyle}>
+            <FaImage /> <div style={{ fontSize: 12 }}>Upload</div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              style={{ display: "none" }}
+              onChange={onFileChange}
+            />
+          </label>
+
           <button
-            onClick={() => setShowMenu(!showMenu)}
-            style={{ padding: 8, borderRadius: 8 }}
+            onClick={() => {
+              setPaintOpen(true);
+              setShowMenu(false);
+            }}
+            style={menuItemStyle}
           >
-            <FaPlus />
+            <FaPaintBrush /> <div style={{ fontSize: 12 }}>Paint</div>
           </button>
 
-          {showMenu && (
-            <div
-              style={{
-                position: "absolute",
-                top: 42,
-                left: 0,
-                background: "#fff",
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: 8,
-                zIndex: 50,
-              }}
-            >
-              <div style={{ display: "flex", gap: 8 }}>
-                <label style={menuItemStyle}>
-                  <FaImage /> <div style={{ fontSize: 12 }}>Upload</div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,video/*"
-                    style={{ display: "none" }}
-                    onChange={onFileChange}
-                  />
-                </label>
-
-                <button
-                  onClick={() => {
-                    setPaintOpen(true);
-                    setShowMenu(false);
-                  }}
-                  style={menuItemStyle}
-                >
-                  <FaPaintBrush /> <div style={{ fontSize: 12 }}>Paint</div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowYouTubeModal(true);
-                    setShowMenu(false);
-                  }}
-                  style={menuItemStyle}
-                >
-                  <FaYoutube /> <div style={{ fontSize: 12 }}>YouTube</div>
-                </button>
-              </div>
-            </div>
-          )}
+          <button
+            onClick={() => {
+              setShowYouTubeModal(true);
+              setShowMenu(false);
+            }}
+            style={menuItemStyle}
+          >
+            <FaYoutube /> <div style={{ fontSize: 12 }}>YouTube</div>
+          </button>
         </div>
-        <button
-  onClick={() => setPickerOpen(true)}
-  style={{
-    padding: 8,
-    borderRadius: 8,
-    background: "#eee",
-  }}
->
-  <FaSmile />
-</button>
-        <textarea
-  value={text}
-  onChange={(e) => setText(e.target.value)}
-  placeholder="Type a message"
-  rows={1}
-  style={{
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    resize: "none",          // prevents manual resizing
-    overflowY: "auto",       // scroll when long
-    minHeight: 40,
-    maxHeight: 120,          // optional cap
-  }}
-/>
+      </div>
+    )}
+  </div>
+
+  <button
+    onClick={() => setPickerOpen(true)}
+    style={{
+      padding: 6,
+      borderRadius: 8,
+      background: "#eee",
+    }}
+  >
+    <FaSmile />
+  </button>
+
+  <textarea
+    value={text}
+    onChange={(e) => setText(e.target.value)}
+    placeholder="Type a message"
+    rows={1}
+    style={{
+      flex: 1,
+      padding: 8,
+      borderRadius: 8,
+      resize: "none",
+      overflowY: "auto",
+      minHeight: 40,
+      maxHeight: 120,
+    }}
+  />
+
+  {/* 🎤 Microphone */}
+  <button
+    onClick={toggleRecording}
+    style={{
+      padding: 6,
+      borderRadius: 8,
+      background: recording ? "#ff4b4b" : "#eee",
+      color: recording ? "#fff" : "#333",
+    }}
+    title={recording ? "Stop Recording" : "Start Recording"}
+  >
+    <FaMicrophone />
+  </button>
+
+  {/* ✅ Send icon */}
+  <button
+    onClick={sendMessage}
+    style={{
+      padding: 8,
+      background: "#4e54c8",
+      color: "#fff",
+      borderRadius: 8,
+      flexShrink: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    <FaPaperPlane />
+  </button>
 
 
-        {/* 🎤 Microphone */}
-<button
-  onClick={toggleRecording}
-  style={{
-    padding: 8,
-    borderRadius: 8,
-    background: recording ? "#ff4b4b" : "#eee",
-    color: recording ? "#fff" : "#333",
-  }}
-  title={recording ? "Stop Recording" : "Start Recording"}
->
-  <FaMicrophone />
-</button>
-        <button
-          onClick={sendMessage}
-          style={{
-            padding: "8px 12px",
-            background: "#4e54c8",
-            color: "#fff",
-            borderRadius: 8,
-            flexShrink: 0,
-          }}
-        >
-          Send
-        </button>
         
 
       </div>
