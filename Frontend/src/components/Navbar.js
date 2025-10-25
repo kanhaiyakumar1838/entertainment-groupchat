@@ -1,13 +1,16 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext"; // import your auth hook
+import axios from "axios";
+
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth(); // get logout function from context
   const [profileOpen, setProfileOpen] = useState(false);
   const [profile, setProfile] = useState(null);
+  const API_URL = process.env.REACT_APP_API_URL;
   const authHeader = {
     headers: { Authorization: `Bearer ${user?.token}` } // assuming your context stores token
   };
