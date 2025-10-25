@@ -312,11 +312,13 @@ const toggleRecording = async () => {
       {/* Input + Options */}
       <div
         style={{
-          display: "flex",
-          gap: 8,
-          marginTop: 12,
-          alignItems: "center",
-        }}
+    display: "flex",
+    gap: 8,
+    marginTop: 12,
+    alignItems: "flex-end", // aligns bottom edges
+    width: "100%",
+    overflow: "hidden", // prevents horizontal scroll
+  }}
       >
         <div style={{ position: "relative" }}>
           <button
@@ -384,12 +386,22 @@ const toggleRecording = async () => {
 >
   <FaSmile />
 </button>
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message"
-          style={{ flex: 1, padding: 8, borderRadius: 8 }}
-        />
+        <textarea
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  placeholder="Type a message"
+  rows={1}
+  style={{
+    flex: 1,
+    padding: 8,
+    borderRadius: 8,
+    resize: "none",          // prevents manual resizing
+    overflowY: "auto",       // scroll when long
+    minHeight: 40,
+    maxHeight: 120,          // optional cap
+  }}
+/>
+
 
         {/* 🎤 Microphone */}
 <button
@@ -411,6 +423,7 @@ const toggleRecording = async () => {
             background: "#4e54c8",
             color: "#fff",
             borderRadius: 8,
+            flexShrink: 0,
           }}
         >
           Send
