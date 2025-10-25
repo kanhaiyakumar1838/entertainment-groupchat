@@ -18,14 +18,16 @@ const app = express();
 // ✅ CORS setup
 app.use(
   cors({
-    //origin: "*", // you can replace with ["https://rainbow-chat.onrender.com", "http://localhost:3000"]
     origin: [
-    "https://rainbow-chat-frontend.onrender.com",
-    "http://localhost:3000"
-  ],
+      "https://rainbow-chat.onrender.com",  // frontend
+      "http://localhost:3000"               // for local dev
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
 
 app.use(express.json());
 
