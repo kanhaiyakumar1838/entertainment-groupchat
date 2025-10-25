@@ -11,6 +11,7 @@ const authRoutes = require("./routes/auth");
 const groupRoutes = require("./routes/groups");
 const messageRoutes = require("./routes/messages");
 const uploadRoutes = require("./routes/upload");
+const userRoutes = require("./routes/user"); // import user routes
 
 // Initialize express
 const app = express();
@@ -46,6 +47,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/messages", messageRoutes);
 app.use("/upload", uploadRoutes);
+app.use("/user", userRoutes); 
 
 app.get("/", (req, res) => {
   res.send("✅ Backend is running successfully on Render!");
