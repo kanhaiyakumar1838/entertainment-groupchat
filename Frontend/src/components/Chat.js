@@ -3,14 +3,13 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import PaintModal from "./PaintModal";
-import { FaPlus, FaImage, FaPaintBrush, FaYoutube } from "react-icons/fa";
+import { FaPlus, FaImage, FaPaintBrush, FaYoutube, FaSmile, FaMicrophone, FaPaperPlane } from "react-icons/fa";
 import YouTubeSearchModal from "./YouTubeSearchModal";
 import EmojiGifPicker from "./EmojiGifPicker";
-import { FaSmile } from "react-icons/fa";
-import { FaMicrophone } from "react-icons/fa";
+
 
 import { io } from "socket.io-client";
-import { FaPlus, FaImage, FaPaintBrush, FaYoutube, FaSmile, FaMicrophone, FaPaperPlane } from "react-icons/fa";
+
 
 
 
