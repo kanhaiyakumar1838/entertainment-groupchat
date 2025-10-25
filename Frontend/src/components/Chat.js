@@ -10,6 +10,8 @@ import { FaSmile } from "react-icons/fa";
 import { FaMicrophone } from "react-icons/fa";
 
 import { io } from "socket.io-client";
+import { FaPlus, FaImage, FaPaintBrush, FaYoutube, FaSmile, FaMicrophone, FaPaperPlane } from "react-icons/fa";
+
 
 
 
