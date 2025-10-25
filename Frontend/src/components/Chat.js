@@ -9,6 +9,8 @@ import EmojiGifPicker from "./EmojiGifPicker";
 import { FaSmile } from "react-icons/fa";
 import { FaMicrophone } from "react-icons/fa";
 
+import { io } from "socket.io-client";
+import { useRef } from "react";
 
 
 
@@ -27,6 +29,8 @@ export default function Chat() {
   const [recording, setRecording] = useState(false);
 const [mediaRecorder, setMediaRecorder] = useState(null);
 const [audioChunks, setAudioChunks] = useState([]);
+const socket = useRef(null);
+
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -46,6 +50,24 @@ const API_URL = process.env.REACT_APP_API_URL;
     fetchMessages();
   }, [groupId]);
 
+  useEffect(() => {
+  socket.current = io(API_URL);
+
+  // Join the group room on socket server
+  socket.current.emit("joinGroup", groupId);
+
+  // Listen for new messages from server
+  socket.current.on("messageReceived", (msg) => {
+    setMessages((prev) => [...prev, msg]);
+  });
+
+  // Cleanup when leaving the chat
+  return () => {
+    socket.current.disconnect();
+  };
+}, [groupId]);
+
+
   // Generic message sender
   const postMessage = async (payload) => {
     try {
@@ -55,6 +77,8 @@ const API_URL = process.env.REACT_APP_API_URL;
         authHeader
       );
       setMessages((m) => [...m, res.data]);
+       // 🔥 Emit the new message to all connected users
+    socket.current.emit("newMessage", groupId, res.data);
     } catch (err) {
       console.error("Error sending message:", err);
     }
