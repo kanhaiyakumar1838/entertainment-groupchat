@@ -7,6 +7,41 @@ require("dotenv").config();
 
 const OWNER_CREDENTIALS = JSON.parse(process.env.OWNER_CREDENTIALS);
 
+// ✅ REGISTER new user
+router.post("/register", async (req, res) => {
+  try {
+    const { username, email, password, age, phone } = req.body;
+
+    // Check existing user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create and save new user
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      age,
+      phone,
+      role: "user",
+    });
+    await newUser.save();
+
+    res.json({ message: "Registration successful" });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+
 router.post("/login", async (req, res) => {
   const { email, username, password } = req.body;
   const userEmail = email || username;
