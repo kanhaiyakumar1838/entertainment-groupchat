@@ -31,6 +31,13 @@ app.use(
 
 app.use(express.json());
 
+
+
+app.use(express.static(path.join(__dirname, "Frontend/build")));
+
+
+
+
 // ✅ Serve static uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -46,6 +53,10 @@ app.get("/", (req, res) => {
 
 app.get("/api/test", (req, res) => {
   res.json({ message: "✅ API is running successfully on Render!" });
+});
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "Frontend", "build", "index.html"));
 });
 
 // ✅ Create HTTP server for Socket.IO
