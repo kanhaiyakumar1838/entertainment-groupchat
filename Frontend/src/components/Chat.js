@@ -77,7 +77,7 @@ const API_URL = process.env.REACT_APP_API_URL;
         payload,
         authHeader
       );
-      setMessages((m) => [...m, res.data]);
+      // setMessages((m) => [...m, res.data]);
        // 🔥 Emit the new message to all connected users
     socket.current.emit("newMessage", groupId, res.data);
     } catch (err) {
@@ -310,7 +310,7 @@ const toggleRecording = async () => {
         ))}
       </div>
 
-// Replace your input + options section with this
+
 <div
   style={{
     display: "flex",
