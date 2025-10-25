@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   age: { type: Number, required: true },
   phone: { type: String, required: true },
   role: { type: String, enum: ["owner", "user"], default: "user" },
+  profilePic: { type: String, default: "" }, // URL to profile picture
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);
