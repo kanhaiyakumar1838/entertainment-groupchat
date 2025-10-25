@@ -18,7 +18,11 @@ const app = express();
 // ✅ CORS setup
 app.use(
   cors({
-    origin: "*", // you can replace with ["https://rainbow-chat.onrender.com", "http://localhost:3000"]
+    //origin: "*", // you can replace with ["https://rainbow-chat.onrender.com", "http://localhost:3000"]
+    origin: [
+    "https://rainbow-chat-frontend.onrender.com",
+    "http://localhost:3000"
+  ],
     credentials: true,
   })
 );
