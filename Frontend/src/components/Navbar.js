@@ -6,26 +6,21 @@ import axios from "axios";
 
 
 const Navbar = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth(); // get logout function from context
-  const [profileOpen, setProfileOpen] = useState(false);
+  const { user, logout, token } = useAuth(); // get token from context
   const [profile, setProfile] = useState(null);
-  const API_URL = process.env.REACT_APP_API_URL;
-  const authHeader = {
-    headers: { Authorization: `Bearer ${user?.token}` } // assuming your context stores token
+  const [profileOpen, setProfileOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const fetchProfile = async () => {
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/user/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProfile(res.data);
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
   };
-
-const fetchProfile = async () => {
-  try {
-    const res = await axios.get(`${API_URL}/user/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setProfile(res.data);
-  } catch (err) {
-    console.error("Error fetching profile:", err);
-  }
-};
-
 
   const handleLogout = () => {
     logout();           // update context + clear localStorage
