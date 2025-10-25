@@ -33,7 +33,7 @@ app.use(express.json());
 
 
 
-app.use(express.static(path.join(__dirname, "Frontend/build")));
+
 
 
 
@@ -55,9 +55,9 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "✅ API is running successfully on Render!" });
 });
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "Frontend", "build", "index.html"));
-});
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "Frontend", "build", "index.html"));
+// });
 
 // ✅ Create HTTP server for Socket.IO
 const server = http.createServer(app);
