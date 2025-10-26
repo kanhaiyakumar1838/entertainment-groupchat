@@ -205,6 +205,7 @@ const toggleRecording = async () => {
 
       {/* Messages */}
       <div
+      ref={chatContainerRef}
         style={{
           border: "1px solid #ccc",
           height: 380,
