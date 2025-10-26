@@ -46,15 +46,7 @@ const API_URL = process.env.REACT_APP_API_URL;
       const res = await axios.get(`${API_URL}/messages/${groupId}`, authHeader);
       setMessages(res.data);
 
-      // 🧭 Scroll to bottom after initial load
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTo({
-            top: chatContainerRef.current.scrollHeight,
-            behavior: "smooth",
-          });
-        }
-      }, 300);
+    
     } catch (err) {
       console.error("Error fetching messages:", err);
     }
@@ -80,6 +72,16 @@ const API_URL = process.env.REACT_APP_API_URL;
   };
 }, [groupId]);
 
+// 🧭 Auto-scroll after messages change
+useEffect(() => {
+  if (!chatContainerRef.current) return;
+
+  // Scroll to bottom whenever messages change
+  chatContainerRef.current.scrollTo({
+    top: chatContainerRef.current.scrollHeight,
+    behavior: "smooth",
+  });
+}, [messages]);
 
 
 
