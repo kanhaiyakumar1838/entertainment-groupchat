@@ -197,20 +197,35 @@ const toggleRecording = async () => {
 
 
   return (
-    <div style={{ padding: 12 }}>
+    <div
+  style={{
+    padding: 12,
+    width: "100%",
+    maxWidth: "100vw",
+    boxSizing: "border-box",
+    overflowX: "hidden", // ✅ stops any horizontal scroll
+  }}
+>
+
       <h2>Group Chat</h2>
 
       {/* Messages */}
       <div
-      ref={chatContainerRef}
-        style={{
-          border: "1px solid #ccc",
-          height: 380,
-          overflowY: "auto",
-          padding: 8,
-          borderRadius: 8,
-        }}
-      >
+  ref={chatContainerRef}
+  style={{
+    border: "1px solid #ccc",
+    height: 380,
+    overflowY: "auto",
+    overflowX: "hidden", // ✅ prevent horizontal scroll
+    padding: 8,
+    borderRadius: 8,
+    width: "100%", // ✅ fit container
+    boxSizing: "border-box",
+    wordWrap: "break-word", // ✅ break long words
+    maxWidth: "100vw", // ✅ never overflow screen width
+  }}
+>
+
         {messages.map((msg) => (
           
           <div key={msg._id} style={{ marginBottom: 10 }}>
@@ -231,13 +246,13 @@ const toggleRecording = async () => {
       <img
         src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
         alt="media"
-        style={{ maxWidth: 300, borderRadius: 6 }}
+        style={{ maxWidth: "100%", borderRadius: 6 }}S
       />
     ) : msg.media.mimetype?.startsWith("video/") ? (
       <video
         controls
         src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
-        style={{ maxWidth: 360 }}
+        style={{ maxWidth: "100%"}}
       />
     ) : msg.media.mimetype?.startsWith("audio/") ? (
       <audio
