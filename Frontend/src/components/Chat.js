@@ -75,12 +75,7 @@ const API_URL = process.env.REACT_APP_API_URL;
 // 🧭 Auto-scroll after messages change
 useEffect(() => {
   if (!chatContainerRef.current) return;
-
-  // Scroll to bottom whenever messages change
-  chatContainerRef.current.scrollTo({
-    top: chatContainerRef.current.scrollHeight,
-    behavior: "smooth",
-  });
+  chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
 }, [messages]);
 
 
