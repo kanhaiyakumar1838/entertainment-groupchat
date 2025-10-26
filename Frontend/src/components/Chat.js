@@ -33,23 +33,32 @@ const [audioChunks, setAudioChunks] = useState([]);
 const socket = useRef(null);
 
 
+
 const API_URL = process.env.REACT_APP_API_URL;
 
   // Fetch messages on load
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const res = await axios.get(
-          `${API_URL}/messages/${groupId}`,
-          authHeader
-        );
-        setMessages(res.data);
-      } catch (err) {
-        console.error("Error fetching messages:", err);
-      }
-    };
-    fetchMessages();
-  }, [groupId]);
+  const fetchMessages = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/messages/${groupId}`, authHeader);
+      setMessages(res.data);
+
+      // 🧭 Scroll to bottom after initial load
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        }
+      }, 300);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    }
+  };
+  fetchMessages();
+}, [groupId]);
+
 
   useEffect(() => {
   socket.current = io(API_URL);
