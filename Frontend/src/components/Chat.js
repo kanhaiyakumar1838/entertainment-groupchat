@@ -6,11 +6,25 @@ import PaintModal from "./PaintModal";
 import { FaPlus, FaImage, FaPaintBrush, FaYoutube, FaSmile, FaMicrophone, FaPaperPlane } from "react-icons/fa";
 import YouTubeSearchModal from "./YouTubeSearchModal";
 import EmojiGifPicker from "./EmojiGifPicker";
+import FloatingYouTube from "./FloatingYouTube";
+
 
 
 import { io } from "socket.io-client";
 
-
+// ✅ Add helper function here (before Chat component)
+function extractYouTubeId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
+    if (u.searchParams.has("v")) return u.searchParams.get("v");
+    // fallback: last path segment
+    const parts = u.pathname.split("/");
+    return parts.pop() || parts.pop();
+  } catch (err) {
+    return url;
+  }
+}
 
 
 
@@ -34,6 +48,9 @@ const socket = useRef(null);
 const messagesEndRef = useRef(null);
 const chatContainerRef = useRef(null);
 const [autoScroll, setAutoScroll] = useState(true);
+const [floatingVideo, setFloatingVideo] = useState(null);
+// floatingVideo shape: { videoId, title }
+
 
 
 
@@ -152,10 +169,11 @@ useEffect(() => {
     await postMessage({
       text: `🎬 ${video.title}`,
       youtube: {
-        videoId: video.url.split("v=")[1],
-        title: video.title,
-        thumbnail: video.thumbnail,
-      },
+  videoId: extractYouTubeId(video.url),
+  title: video.title,
+  thumbnail: video.thumbnail,
+},
+
     });
     setShowYouTubeModal(false);
   };
@@ -269,33 +287,36 @@ const toggleRecording = async () => {
 
 
             {msg.youtube && (
-              <div
-                style={{
-                  marginTop: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <img
-                  src={msg.youtube.thumbnail}
-                  alt="thumb"
-                  style={{ width: 120, borderRadius: 6 }}
-                />
-                <div>
-                  <div style={{ fontWeight: "bold" }}>
-                    {msg.youtube.title}
-                  </div>
-                  <a
-                    href={`https://www.youtube.com/watch?v=${msg.youtube.videoId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Watch on YouTube
-                  </a>
-                </div>
-              </div>
-            )}
+  <div
+    style={{
+      marginTop: 6,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      cursor: "pointer"
+    }}
+    // Click to open floating player
+    onClick={() =>
+      setFloatingVideo({
+        videoId: msg.youtube.videoId,
+        title: msg.youtube.title ?? "YouTube Video",
+      })
+    }
+  >
+    <img
+      src={msg.youtube.thumbnail}
+      alt="thumb"
+      style={{ width: 120, borderRadius: 6 }}
+    />
+    <div>
+      <div style={{ fontWeight: "bold" }}>{msg.youtube.title}</div>
+      <div style={{ fontSize: 13, color: "#0077cc", textDecoration: "underline" }}>
+        Click to float player
+      </div>
+    </div>
+  </div>
+)}
+
             {/* Reactions */}
 <div style={{ display: "flex", gap: 12, marginTop: 4, fontSize: 14 }}>
   {["like", "heart"].map((type) => {
@@ -495,6 +516,16 @@ const toggleRecording = async () => {
     onClose={() => setPickerOpen(false)}
   />
 )}
+
+{floatingVideo && (
+  <FloatingYouTube
+    videoId={floatingVideo.videoId}
+    title={floatingVideo.title}
+    initial={{ x: 80, y: 80, width: 560 }}
+    onClose={() => setFloatingVideo(null)}
+  />
+)}
+
 
     </div>
   );
