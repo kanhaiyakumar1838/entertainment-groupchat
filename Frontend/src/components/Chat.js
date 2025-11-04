@@ -3,23 +3,9 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import PaintModal from "./PaintModal";
-import { FaPlus, FaImage, FaPaintBrush, FaYoutube, FaSmile, FaMicrophone, FaPaperPlane } from "react-icons/fa";
+import { FaPlus, FaImage, FaPaintBrush, FaYoutube, FaSmile, FaMicrophone } from "react-icons/fa";
 import YouTubeSearchModal from "./YouTubeSearchModal";
 import EmojiGifPicker from "./EmojiGifPicker";
-import { io } from "socket.io-client";
-
-// simple youtube id extractor
-function extractYouTubeId(url) {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
-    if (u.searchParams.has("v")) return u.searchParams.get("v");
-    const parts = u.pathname.split("/");
-    return parts.pop() || parts.pop();
-  } catch (err) {
-    return url;
-  }
-}
 
 export default function Chat() {
   const { groupId } = useParams();
@@ -36,82 +22,44 @@ export default function Chat() {
   const [recording, setRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
-  const socket = useRef(null);
+
   const chatContainerRef = useRef(null);
-  const menuRef = useRef(null); // <- ensure this exists
-  const [autoScroll, setAutoScroll] = useState(true);
+  const menuRef = useRef(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || "";
-
-  // Debug: log showMenu changes (remove when stable)
-  useEffect(() => {
-    console.log("showMenu state:", showMenu);
-  }, [showMenu]);
-
-  // replace the old useEffect that used 'mousedown' with this one
-useEffect(() => {
-  function onDocClick(e) {
-    // if menu not open, nothing to do
-    if (!showMenu) return;
-    if (!menuRef.current) {
-      setShowMenu(false);
-      return;
-    }
-    // if clicked outside the menuRef, close
-    if (!menuRef.current.contains(e.target)) {
-      setShowMenu(false);
-    }
-  }
-  // use click/touchend instead of mousedown/touchstart
-  document.addEventListener("click", onDocClick);
-  document.addEventListener("touchend", onDocClick);
-  return () => {
-    document.removeEventListener("click", onDocClick);
-    document.removeEventListener("touchend", onDocClick);
-  };
-}, [showMenu]); // keep showMenu dependency so handler sees current state
-
-
-  // Fetch messages (guarded)
+  // Fetch messages
   useEffect(() => {
     const fetchMessages = async () => {
-      if (!API_URL) return;
       try {
-        const res = await axios.get(`${API_URL}/messages/${groupId}`, authHeader);
+        const res = await axios.get(`http://localhost:5000/api/messages/${groupId}`, authHeader);
         setMessages(res.data || []);
       } catch (err) {
         console.error("Error fetching messages:", err);
       }
     };
     if (groupId) fetchMessages();
-  }, [groupId, API_URL]);
+  }, [groupId]);
 
-  // Socket setup (guarded)
+  // outside-click handler: use click/touchend (not mousedown)
   useEffect(() => {
-    if (!API_URL) return;
-    socket.current = io(API_URL);
-    if (socket.current && socket.current.emit) socket.current.emit("joinGroup", groupId);
-    socket.current.on("messageReceived", (msg) => setMessages((prev) => [...prev, msg]));
-    return () => {
-      if (socket.current && socket.current.disconnect) socket.current.disconnect();
-    };
-  }, [groupId, API_URL]);
-
-  // Auto-scroll
-  useEffect(() => {
-    if (!chatContainerRef.current) return;
-    if (autoScroll) chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-  }, [messages, autoScroll]);
-
-  // Post message
-  const postMessage = async (payload) => {
-    if (!API_URL) {
-      console.warn("API_URL missing — running in frontend-only mode; postMessage disabled.");
-      return null;
+    function onDocClick(e) {
+      if (!showMenu) return;
+      if (!menuRef.current) {
+        setShowMenu(false);
+        return;
+      }
+      if (!menuRef.current.contains(e.target)) setShowMenu(false);
     }
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("touchend", onDocClick);
+    return () => {
+      document.removeEventListener("click", onDocClick);
+      document.removeEventListener("touchend", onDocClick);
+    };
+  }, [showMenu]);
+
+  const postMessage = async (payload) => {
     try {
-      const res = await axios.post(`${API_URL}/messages/${groupId}`, payload, authHeader);
-      if (socket.current && socket.current.emit) socket.current.emit("newMessage", groupId, res.data);
+      const res = await axios.post(`http://localhost:5000/api/messages/${groupId}`, payload, authHeader);
       setMessages((m) => [...m, res.data]);
       return res.data;
     } catch (err) {
@@ -125,19 +73,14 @@ useEffect(() => {
     setText("");
   };
 
-  // File upload
   const handleFile = async (file) => {
-    if (!API_URL) {
-      alert("Upload disabled (API_URL not configured).");
-      return;
-    }
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await axios.post(`${API_URL}/upload`, fd, {
+      const res = await axios.post("http://localhost:5000/api/upload", fd, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
-      const media = { url: res.data.url, mimetype: res.data.mimetype, external: true };
+      const media = { url: res.data.url, mimetype: res.data.mimetype };
       await postMessage({ text: "", media });
     } catch (err) {
       console.error("Upload error:", err);
@@ -157,7 +100,6 @@ useEffect(() => {
     fileInputRef.current?.click();
   };
 
-  // Paint send
   const handlePaintSend = async (dataUrl) => {
     const blob = dataURLtoBlob(dataUrl);
     const file = new File([blob], `drawing-${Date.now()}.png`, { type: "image/png" });
@@ -174,16 +116,18 @@ useEffect(() => {
     return new Blob([u8arr], { type: mime });
   }
 
-  // Send YouTube
   const sendYouTubeVideo = async (video) => {
     await postMessage({
       text: `🎬 ${video.title}`,
-      youtube: { videoId: extractYouTubeId(video.url), title: video.title, thumbnail: video.thumbnail },
+      youtube: {
+        videoId: (video.url && video.url.split("v=")[1]) || video.url,
+        title: video.title,
+        thumbnail: video.thumbnail,
+      },
     });
     setShowYouTubeModal(false);
   };
 
-  // Recording
   const toggleRecording = async () => {
     try {
       if (recording && mediaRecorder) {
@@ -213,30 +157,24 @@ useEffect(() => {
   };
 
   return (
-    <div style={{ padding: 12, width: "100%", maxWidth: "100vw", boxSizing: "border-box", overflowX: "hidden" }}>
+    <div style={{ padding: 12 }}>
       <h2>Group Chat</h2>
 
-      {/* Messages */}
       <div
         ref={chatContainerRef}
         style={{
           border: "1px solid #ccc",
           height: 380,
           overflowY: "auto",
-          overflowX: "hidden",
           padding: 8,
           borderRadius: 8,
-          width: "100%",
-          boxSizing: "border-box",
-          wordWrap: "break-word",
-          maxWidth: "100vw",
         }}
       >
-        {messages.map((msg, idx) => (
-          <div key={msg._id || msg.id || idx} style={{ marginBottom: 10 }}>
+        {messages.map((msg) => (
+          <div key={msg._id} style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 13, color: "#333" }}>
               <strong>{msg.sender?.username || "Unknown"}</strong>
-              <span style={{ marginLeft: 8, color: "#888", fontSize: 12 }}>{new Date(msg.createdAt || Date.now()).toLocaleString()}</span>
+              <span style={{ marginLeft: 8, color: "#888", fontSize: 12 }}>{new Date(msg.createdAt).toLocaleString()}</span>
             </div>
 
             {msg.text && <div style={{ marginTop: 4 }}>{msg.text}</div>}
@@ -244,11 +182,11 @@ useEffect(() => {
             {msg.media && (
               <div style={{ marginTop: msg.text ? 6 : 2 }}>
                 {msg.media.mimetype?.startsWith("image/") ? (
-                  <img src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`} alt="media" style={{ maxWidth: "100%", borderRadius: 6 }} />
+                  <img src={msg.media.external ? msg.media.url : `http://localhost:5000${msg.media.url}`} alt="media" style={{ maxWidth: 300, borderRadius: 6 }} />
                 ) : msg.media.mimetype?.startsWith("video/") ? (
-                  <video controls src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`} style={{ maxWidth: "100%" }} />
+                  <video controls src={msg.media.external ? msg.media.url : `http://localhost:5000${msg.media.url}`} style={{ maxWidth: 360 }} />
                 ) : msg.media.mimetype?.startsWith("audio/") ? (
-                  <audio controls src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`} style={{ width: 250 }} />
+                  <audio controls src={msg.media.external ? msg.media.url : `http://localhost:5000${msg.media.url}`} style={{ width: 250 }} />
                 ) : null}
               </div>
             )}
@@ -258,9 +196,7 @@ useEffect(() => {
                 <img src={msg.youtube.thumbnail} alt="thumb" style={{ width: 120, borderRadius: 6 }} />
                 <div>
                   <div style={{ fontWeight: "bold" }}>{msg.youtube.title}</div>
-                  <a href={`https://www.youtube.com/watch?v=${msg.youtube.videoId}`} target="_blank" rel="noreferrer">
-                    Watch on YouTube
-                  </a>
+                  <a href={`https://www.youtube.com/watch?v=${msg.youtube.videoId}`} target="_blank" rel="noreferrer">Watch on YouTube</a>
                 </div>
               </div>
             )}
@@ -268,44 +204,24 @@ useEffect(() => {
             <div style={{ display: "flex", gap: 12, marginTop: 4, fontSize: 14 }}>
               {["like", "heart"].map((type) => {
                 const count = msg.reactions?.filter((r) => r.type === type).length || 0;
-                const reacted = msg.reactions?.some((r) => r.type === type && r.user?._id === localStorage.getItem("userId"));
                 const symbol = type === "like" ? "👍" : "❤️";
-                return (
-                  <span
-                    key={type}
-                    style={{ cursor: "pointer", fontWeight: reacted ? "bold" : "normal", userSelect: "none" }}
-                    onClick={async () => {
-                      try {
-                        if (!API_URL) return;
-                        const res = await axios.post(`${API_URL}/messages/${msg._id}/react`, { type }, authHeader);
-                        setMessages((prev) => prev.map((m) => (m._id === res.data._id ? res.data : m)));
-                      } catch (err) {
-                        console.error("Reaction error:", err);
-                      }
-                    }}
-                  >
-                    {symbol} {count}
-                  </span>
-                );
+                return <span key={type}>{symbol} {count}</span>;
               })}
             </div>
           </div>
         ))}
       </div>
 
-      {/* toolbar */}
-      <div style={{ display: "flex", gap: 4, marginTop: 12, alignItems: "flex-end", width: "100%", overflow: "hidden" }}>
-        {/* + button & menu */}
+      <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
         <div style={{ position: "relative" }}>
           <button
             type="button"
             aria-label="open-menu"
             onClick={(e) => {
               e.stopPropagation();
-              console.log("button clicked hua");
               setShowMenu((s) => !s);
             }}
-            style={{ padding: 6, borderRadius: 8 }}
+            style={{ padding: 8, borderRadius: 8 }}
           >
             <FaPlus />
           </button>
@@ -316,18 +232,17 @@ useEffect(() => {
               onClick={(e) => e.stopPropagation()}
               style={{
                 position: "absolute",
-                top: 38,
+                top: 42,
                 left: 0,
                 background: "#fff",
                 border: "1px solid #ddd",
                 borderRadius: 8,
-                padding: 6,
+                padding: 8,
                 zIndex: 5000,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                minWidth: 200,
+                minWidth: 180,
               }}
             >
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 8 }}>
                 <div style={menuItemStyle} onClick={(ev) => { ev.stopPropagation(); handleUploadClick(ev); setShowMenu(false); }}>
                   <FaImage /> <div style={{ fontSize: 12, marginLeft: 6 }}>Upload</div>
                   <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={onFileChange} />
@@ -345,25 +260,22 @@ useEffect(() => {
           )}
         </div>
 
-        <button type="button" onClick={() => setPickerOpen(true)} style={{ padding: 6, borderRadius: 8, background: "#eee" }}>
+        <button type="button" onClick={() => setPickerOpen(true)} style={{ padding: 8, borderRadius: 8, background: "#eee" }}>
           <FaSmile />
         </button>
 
-        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message" rows={1} style={{ flex: 1, padding: 8, borderRadius: 8, resize: "none", overflowY: "auto", minHeight: 40, maxHeight: 120 }} />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message" style={{ flex: 1, padding: 8, borderRadius: 8 }} />
 
-        <button type="button" onClick={toggleRecording} style={{ padding: 6, borderRadius: 8, background: recording ? "#ff4b4b" : "#eee", color: recording ? "#fff" : "#333" }} title={recording ? "Stop Recording" : "Start Recording"}>
+        <button type="button" onClick={toggleRecording} style={{ padding: 8, borderRadius: 8, background: recording ? "#ff4b4b" : "#eee" }} title={recording ? "Stop Recording" : "Start Recording"}>
           <FaMicrophone />
         </button>
 
-        <button type="button" onClick={sendMessage} style={{ padding: 8, background: "#4e54c8", color: "#fff", borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <FaPaperPlane />
-        </button>
+        <button type="button" onClick={sendMessage} style={{ padding: "8px 12px", background: "#4e54c8", color: "#fff", borderRadius: 8 }}>Send</button>
       </div>
 
-      {/* Modals */}
       <PaintModal isOpen={paintOpen} onClose={() => setPaintOpen(false)} onSend={handlePaintSend} />
       {showYouTubeModal && <YouTubeSearchModal onSelect={sendYouTubeVideo} onClose={() => setShowYouTubeModal(false)} />}
-      {pickerOpen && <EmojiGifPicker onEmoji={(emoji) => setText((t) => t + emoji)} onGif={async (gifUrl) => { console.log("Sending GIF URL:", gifUrl); await postMessage({ text: "", media: { url: gifUrl, mimetype: "image/gif", external: true } }); }} onClose={() => setPickerOpen(false)} />}
+      {pickerOpen && <EmojiGifPicker onEmoji={(emoji) => setText((t) => t + emoji)} onGif={async (gifUrl) => { await postMessage({ text: "", media: { url: gifUrl, mimetype: "image/gif", external: true } }); }} onClose={() => setPickerOpen(false)} />}
     </div>
   );
 }
