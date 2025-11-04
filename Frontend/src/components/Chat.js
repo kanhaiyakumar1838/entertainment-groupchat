@@ -351,12 +351,15 @@ const toggleRecording = async () => {
   }}
 >
   <div style={{ position: "relative" }}>
-    <button
-      onClick={() => setShowMenu(!showMenu)}
-      style={{ padding: 6, borderRadius: 8 }}
-    >
-      <FaPlus />
-    </button>
+   <button
+  type="button"
+  onClick={(e) => { e.stopPropagation(); setShowMenu((s) => !s); }}
+  style={{ padding: 6, borderRadius: 8 }}
+  aria-label="open-menu"
+>
+  <FaPlus />
+</button>
+
 
     {showMenu && (
       <div
