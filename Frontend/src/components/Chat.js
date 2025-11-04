@@ -39,6 +39,24 @@ const [autoScroll, setAutoScroll] = useState(true);
 
 const API_URL = process.env.REACT_APP_API_URL;
 
+
+
+const menuRef = useRef(null);
+
+useEffect(() => {
+  function onDocClick(e) {
+    if (!menuRef.current) return;
+    if (!menuRef.current.contains(e.target)) setShowMenu(false);
+  }
+  document.addEventListener('mousedown', onDocClick);
+  document.addEventListener('touchstart', onDocClick);
+  return () => {
+    document.removeEventListener('mousedown', onDocClick);
+    document.removeEventListener('touchstart', onDocClick);
+  };
+}, []);
+
+
   // Fetch messages on load
   useEffect(() => {
   const fetchMessages = async () => {
@@ -363,6 +381,8 @@ const toggleRecording = async () => {
 
     {showMenu && (
       <div
+      ref={menuRef}
+      onClick={(e) => e.stopPropagation()}
         style={{
           position: "absolute",
           top: 38,
