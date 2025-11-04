@@ -319,43 +319,78 @@ export default function Chat() {
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 4, marginTop: 12, alignItems: "flex-end", width: "100%", overflow: "hidden" }}>
-        {/* + button & menu */}
-        <div style={{ position: "relative", zIndex: 70 }}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu((s) => !s);
-            }}
-            style={{ padding: 6, borderRadius: 8 }}
-          >
-            <FaPlus />
-          </button>
+      { /* ===== REPLACE + BUTTON & MENU BLOCK WITH THIS ===== */ }
+<div style={{ position: "relative", zIndex: 9999 }}>
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      console.log('+ button clicked');         // <-- debug log
+      setShowMenu((s) => !s);
+    }}
+    style={{
+      padding: 8,
+      borderRadius: 8,
+      background: "#fff",
+      cursor: "pointer",
+      border: "1px solid #ddd",
+      zIndex: 10000,
+      pointerEvents: "auto"
+    }}
+    aria-label="open-menu"
+  >
+    <FaPlus />
+  </button>
 
-          {showMenu && (
-            <div
-              ref={menuRef}
-              style={{ position: "absolute", top: 38, left: 0, background: "#fff", border: "1px solid #ddd", borderRadius: 8, padding: 6, zIndex: 100, boxShadow: "0 6px 18px rgba(0,0,0,0.12)", minWidth: 200 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: "flex", gap: 6 }}>
-                <div style={menuItemStyle} onClick={(ev) => { ev.stopPropagation(); handleUploadClick(ev); }}>
-                  <FaImage /> <div style={{ fontSize: 12 }}>Upload</div>
-                  <input ref={fileInputRef} id="file-upload" type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={onFileChange} />
-                </div>
+  {showMenu && (
+    <div
+      ref={menuRef}
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        top: 44,
+        left: 0,
+        background: "#fff",
+        border: "1px solid #ddd",
+        borderRadius: 8,
+        padding: 8,
+        zIndex: 10001,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+        pointerEvents: "auto",
+        minWidth: 220,
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <button
+          type="button"
+          onClick={(ev) => { ev.stopPropagation(); console.log('upload clicked'); handleUploadClick(ev); setShowMenu(false); }}
+          style={menuItemStyle}
+        >
+          <FaImage /> <span style={{ marginLeft: 8 }}>Upload</span>
+          <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={onFileChange} />
+        </button>
 
-                <button type="button" onClick={() => { setPaintOpen(true); setShowMenu(false); }} style={menuItemStyle}>
-                  <FaPaintBrush /> <div style={{ fontSize: 12 }}>Paint</div>
-                </button>
+        <button
+          type="button"
+          onClick={(ev) => { ev.stopPropagation(); setPaintOpen(true); setShowMenu(false); console.log('paint clicked'); }}
+          style={menuItemStyle}
+        >
+          <FaPaintBrush /> <span style={{ marginLeft: 8 }}>Paint</span>
+        </button>
 
-                <button type="button" onClick={() => { setShowYouTubeModal(true); setShowMenu(false); }} style={menuItemStyle}>
-                  <FaYoutube /> <div style={{ fontSize: 12 }}>YouTube</div>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={(ev) => { ev.stopPropagation(); setShowYouTubeModal(true); setShowMenu(false); console.log('youtube clicked'); }}
+          style={menuItemStyle}
+        >
+          <FaYoutube /> <span style={{ marginLeft: 8 }}>YouTube</span>
+        </button>
+      </div>
+    </div>
+  )}
+</div>
+{ /* ===== END REPLACEMENT ===== */ }
+
 
         <button onClick={() => setPickerOpen(true)} style={{ padding: 6, borderRadius: 8, background: "#eee" }}>
           <FaSmile />
