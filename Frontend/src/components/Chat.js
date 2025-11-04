@@ -48,28 +48,29 @@ export default function Chat() {
     console.log("showMenu state:", showMenu);
   }, [showMenu]);
 
-  // outside-click handler to close the menu
-  useEffect(() => {
-    function onDocClick(e) {
-      // if menu not open, nothing to do
-      if (!showMenu) return;
-      // if no menuRef, close for safety
-      if (!menuRef.current) {
-        setShowMenu(false);
-        return;
-      }
-      // if clicked outside the menuRef, close
-      if (!menuRef.current.contains(e.target)) {
-        setShowMenu(false);
-      }
+  // replace the old useEffect that used 'mousedown' with this one
+useEffect(() => {
+  function onDocClick(e) {
+    // if menu not open, nothing to do
+    if (!showMenu) return;
+    if (!menuRef.current) {
+      setShowMenu(false);
+      return;
     }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("touchstart", onDocClick);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("touchstart", onDocClick);
-    };
-  }, [showMenu]);
+    // if clicked outside the menuRef, close
+    if (!menuRef.current.contains(e.target)) {
+      setShowMenu(false);
+    }
+  }
+  // use click/touchend instead of mousedown/touchstart
+  document.addEventListener("click", onDocClick);
+  document.addEventListener("touchend", onDocClick);
+  return () => {
+    document.removeEventListener("click", onDocClick);
+    document.removeEventListener("touchend", onDocClick);
+  };
+}, [showMenu]); // keep showMenu dependency so handler sees current state
+
 
   // Fetch messages (guarded)
   useEffect(() => {
