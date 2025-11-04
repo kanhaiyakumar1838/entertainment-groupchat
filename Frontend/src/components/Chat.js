@@ -369,49 +369,67 @@ const toggleRecording = async () => {
   }}
 >
   <div style={{ position: "relative" }}>
-  <div style={{ position: "relative" }}>
-  <button
-    type="button"
-    aria-label="open-menu"
-    onClick={(e) => { e.stopPropagation(); setShowMenu((s) => !s); }}
-    style={{ padding: 6, borderRadius: 8 }}
-  >
-    <FaPlus />
-  </button>
+   <button
+  type="button"
+  
+  onClick={(e) => { e.stopPropagation(); setShowMenu((s) => !s);console.log("button clicked hua") }}
+  style={{ padding: 6, borderRadius: 8 }}
+  aria-label="open-menu"
+>
+  <FaPlus />
+</button>
 
-  {showMenu && (
-    <div
-      ref={menuRef}            // ensure you have menuRef declared by: const menuRef = useRef(null);
+
+    {showMenu && (
+      <div
+      ref={menuRef}
       onClick={(e) => e.stopPropagation()}
-      style={{
-        position: "absolute",
-        top: 38,
-        left: 0,
-        background: "#fff",
-        border: "1px solid #ddd",
-        borderRadius: 8,
-        padding: 6,
-        zIndex: 5000,
-      }}
-    >
-      <div style={{ display: "flex", gap: 6 }}>
-        <label style={menuItemStyle}>
-          <FaImage /> <div style={{ fontSize: 12 }}>Upload</div>
-          <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={onFileChange} />
-        </label>
+        style={{
+          position: "absolute",
+          top: 38,
+          left: 0,
+          background: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: 8,
+          padding: 6,
+          zIndex: 50,
+        }}
+      >
+        <div style={{ display: "flex", gap: 6 }}>
+          <label style={menuItemStyle}>
+            <FaImage /> <div style={{ fontSize: 12 }}>Upload</div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              style={{ display: "none" }}
+              onChange={onFileChange}
+            />
+          </label>
 
-        <button type="button" onClick={() => { setPaintOpen(true); setShowMenu(false); }} style={menuItemStyle}>
-          <FaPaintBrush /> <div style={{ fontSize: 12 }}>Paint</div>
-        </button>
+          <button
+            onClick={() => {
+              setPaintOpen(true);
+              setShowMenu(false);
+            }}
+            style={menuItemStyle}
+          >
+            <FaPaintBrush /> <div style={{ fontSize: 12 }}>Paint</div>
+          </button>
 
-        <button type="button" onClick={() => { setShowYouTubeModal(true); setShowMenu(false); }} style={menuItemStyle}>
-          <FaYoutube /> <div style={{ fontSize: 12 }}>YouTube</div>
-        </button>
+          <button
+            onClick={() => {
+              setShowYouTubeModal(true);
+              setShowMenu(false);
+            }}
+            style={menuItemStyle}
+          >
+            <FaYoutube /> <div style={{ fontSize: 12 }}>YouTube</div>
+          </button>
+        </div>
       </div>
-    </div>
-  )}
-</div>
-
+    )}
+  </div>
 
   <button
     onClick={() => setPickerOpen(true)}
