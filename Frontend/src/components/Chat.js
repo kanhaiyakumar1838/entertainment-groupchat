@@ -29,6 +29,8 @@ export default function Chat() {
   const [audioChunks, setAudioChunks] = useState([]);
   const socket = useRef(null);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+
   const chatContainerRef = useRef(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [floatingVideo, setFloatingVideo] = useState(null);
