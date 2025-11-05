@@ -219,7 +219,7 @@ const toggleRecording = async () => {
     width: "100%",
     maxWidth: "100vw",
     boxSizing: "border-box",
-    overflowX: "hidden", // ✅ stops any horizontal scroll
+    overflowX: "visible", // ✅ stops any horizontal scroll
   }}
 >
 
