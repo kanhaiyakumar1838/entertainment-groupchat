@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import EmojiPicker from "emoji-picker-react";
 import { GiphyFetch } from "@giphy/js-fetch-api";
 
@@ -12,18 +12,34 @@ export default function EmojiGifPicker({ onEmoji, onGif, onClose }) {
   // fetch trending initially or search on input
   const handleSearch = async (term) => {
     setSearchTerm(term);
-    const { data } = term
-      ? await gf.search(term, { limit: 20 })
-      : await gf.trending({ limit: 20 });
-    setGifs(data);
+    try {
+      const { data } = term
+        ? await gf.search(term, { limit: 20 })
+        : await gf.trending({ limit: 20 });
+      setGifs(data || []);
+    } catch (err) {
+      console.error("Giphy fetch error:", err);
+      setGifs([]);
+    }
   };
 
   // fetch trending GIFs when switching to GIF tab
-  React.useEffect(() => {
+  useEffect(() => {
     if (mode === "gif" && gifs.length === 0) {
       handleSearch("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+
+  // helper to pick the first available .url from list of image variants
+  const pickUrl = (fields) => {
+    for (const f of fields) {
+      if (!f) continue;
+      const val = f.url || f.mp4 || f.webp || f.gif || null;
+      if (val) return val;
+    }
+    return null;
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
@@ -74,84 +90,66 @@ export default function EmojiGifPicker({ onEmoji, onGif, onClose }) {
                 overflowY: "auto",
               }}
             >
-              // inside EmojiGifPicker, update the GIF click handler to this
-{gifs.map((gif) => (
-  <div
-    key={gif.id}
-    onClick={() => {
-      // Prefer direct GIF file when available, else choose a suitable animated fallback.
-      // Candidate fields (common on Giphy objects):
-      // - gif.images.original: usually large (may be .gif or .webp)
-      // - gif.images.original.url
-      // - gif.images.fixed_height: often .gif or .mp4
-      // - gif.images.fixed_height.url
-      // - gif.images.downsized or downsized_medium -> usually .gif
-      // We'll pick the best available direct file and determine its mimetype.
+              {gifs.map((gif) => {
+                // choose best direct file url
+                const url =
+                  pickUrl([
+                    gif.images?.downsized,
+                    gif.images?.downsized_medium,
+                    gif.images?.original,
+                    gif.images?.fixed_height,
+                    gif.images?.fixed_width,
+                    gif.images?.preview_gif,
+                    gif.images?.preview,
+                  ]) || gif.url || null;
 
-      const pick = (fields) => {
-        for (const f of fields) {
-          const val = f && f.url ? f.url : null;
-          if (val) return val;
-        }
-        return null;
-      };
+                // determine mimetype based on url
+                let mimetype = "image/gif";
+                if (url) {
+                  const lower = url.split("?")[0].toLowerCase();
+                  if (lower.endsWith(".mp4")) mimetype = "video/mp4";
+                  else if (lower.endsWith(".webm")) mimetype = "video/webm";
+                  else if (lower.endsWith(".webp")) mimetype = "image/webp";
+                  else if (lower.endsWith(".gif")) mimetype = "image/gif";
+                  else {
+                    // try to sniff common patterns
+                    if (url.includes(".mp4") || url.includes("media.mp4")) mimetype = "video/mp4";
+                    else if (url.includes("webp")) mimetype = "image/webp";
+                    else mimetype = "image/gif";
+                  }
+                }
 
-      // order of preference: downsized (gif), original (gif/webp), fixed_height (gif/mp4), preview.mp4 (video)
-      let url =
-        pick([gif.images.downsized, gif.images.downsized_medium]) ||
-        pick([gif.images.original]) ||
-        pick([gif.images.fixed_height]) ||
-        pick([gif.images.fixed_width]) ||
-        pick([gif.images.preview_gif, gif.images.preview]) ||
-        gif.url || // fallback (page link)
-        null;
-
-      // If somehow we still have a giphy page link (like https://giphy.com/gifs/...), try to extract id
-      // and build original gif url from image fields above; if nothing, just use gif.images.original.url
-      if (!url && gif.images && gif.images.original) {
-        url = gif.images.original.url;
-      }
-
-      // Determine mimetype from extension or common patterns
-      let mimetype = "image/gif";
-      if (!url) {
-        console.warn("No gif url found for", gif);
-        return;
-      }
-      const lower = url.split("?")[0].toLowerCase();
-      if (lower.endsWith(".mp4")) mimetype = "video/mp4";
-      else if (lower.endsWith(".webm")) mimetype = "video/webm";
-      else if (lower.endsWith(".webp")) mimetype = "image/webp";
-      else if (lower.endsWith(".gif")) mimetype = "image/gif";
-      else {
-        // For CDN urls that don't have extension, check typical substrings
-        if (url.includes(".mp4") || url.includes("media.mp4")) mimetype = "video/mp4";
-        else if (url.includes("webp")) mimetype = "image/webp";
-        else if (url.includes("giphy.com/media") && url.includes("giphy.gif")) mimetype = "image/gif";
-        else mimetype = "image/gif"; // safe default
-      }
-
-      // send the structured payload to parent
-      onGif({ url, mimetype });
-      onClose();
-    }}
-    style={{
-      cursor: "pointer",
-      borderRadius: 8,
-      overflow: "hidden",
-      transition: "transform 0.2s",
-    }}
-    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-  >
-    <img
-      src={gif.images.fixed_height?.url || gif.images.original?.url}
-      alt="gif"
-      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-    />
-  </div>
-))}
-
+                return (
+                  <div
+                    key={gif.id}
+                    onClick={() => {
+                      if (!url) {
+                        console.warn("No gif url found for", gif);
+                        return;
+                      }
+                      onGif({ url, mimetype });
+                      onClose();
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      transition: "transform 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  >
+                    <img
+                      src={gif.images?.fixed_height?.url || gif.images?.original?.url}
+                      alt={gif.title || "gif"}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Close Button */}
         <button
