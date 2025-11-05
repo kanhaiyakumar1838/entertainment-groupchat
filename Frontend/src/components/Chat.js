@@ -420,12 +420,26 @@ const isDirectMediaUrl = (s) => {
         </button>
 
         <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message"
-          rows={1}
-          className="chat-textarea"
-        />
+  value={text}
+  onChange={async (e) => {
+    const newVal = e.target.value.trim();
+    setText(newVal);
+
+    // ✅ If user typed/pasted a GIF link, auto-send immediately
+    if (isDirectMediaUrl(newVal)) {
+      const mimetype = getMimeFromUrl(newVal) || "image/gif";
+      await postMessage({
+        text: "",
+        media: { url: newVal, mimetype, external: true },
+      });
+      setText(""); // clear textarea instantly
+    }
+  }}
+  placeholder="Type a message"
+  rows={1}
+  className="chat-textarea"
+/>
+
 
         {/* 🎤 Microphone */}
         <button
