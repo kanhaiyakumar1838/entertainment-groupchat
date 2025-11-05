@@ -1,4 +1,4 @@
-// frontend/src/components/FloatingPlayer.js
+// Frontend/src/components/FloatingPlayer.js
 import React, { useEffect, useRef, useState } from "react";
 
 /*
@@ -10,6 +10,8 @@ Props:
 export default function FloatingPlayer({ video, onClose, initialPos = { x: 20, y: 80 } }) {
   const iframeRef = useRef(null);
   const containerRef = useRef(null);
+
+  // use refs for mutable drag state (no re-renders)
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
 
@@ -18,59 +20,78 @@ export default function FloatingPlayer({ video, onClose, initialPos = { x: 20, y
   const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
-    // autoplay when video changes
     setPlaying(true);
     setMinimized(false);
   }, [video]);
 
+  // pointer move / up handlers live on window
   useEffect(() => {
-    function onMouseMove(e) {
+    function onPointerMove(e) {
       if (!dragging.current) return;
-      const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY ?? (e.touches && e.touches[0].clientY);
+      // support both mouse and touch pointer events
+      const clientX = e.clientX;
+      const clientY = e.clientY;
       if (clientX == null) return;
+
       const x = clientX - dragOffset.current.x;
       const y = clientY - dragOffset.current.y;
-      // keep inside viewport
+
+      // clamp to viewport
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const clampedX = Math.max(8, Math.min(w - 320, x));
-      const clampedY = Math.max(8, Math.min(h - 120, y));
+      const maxX = Math.max(8, w - (minimized ? 200 : 320) - 8);
+      const maxY = Math.max(8, h - (minimized ? 56 : 180) - 8);
+      const clampedX = Math.max(8, Math.min(maxX, x));
+      const clampedY = Math.max(8, Math.min(maxY, y));
       setPos({ x: clampedX, y: clampedY });
+
+      // prevent page scroll on touch drag
+      e.preventDefault?.();
     }
-    function onMouseUp() {
+
+    function onPointerUp() {
       dragging.current = false;
     }
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    window.addEventListener("touchmove", onMouseMove, { passive: false });
-    window.addEventListener("touchend", onMouseUp);
+
+    window.addEventListener("pointermove", onPointerMove, { passive: false });
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("touchmove", onMouseMove);
-      window.removeEventListener("touchend", onMouseUp);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
-  }, []);
+  }, [minimized]);
 
   if (!video) return null;
 
   const embedUrl = `https://www.youtube.com/embed/${video.videoId}?autoplay=1&mute=0&enablejsapi=1&rel=0`;
 
-  const onDragStart = (e) => {
+  // Called when user presses down on header area
+  const onPointerDownHeader = (e) => {
+    // If click/touch is on a button inside header, don't start dragging,
+    // so the button click works normally.
+    const btn = e.target.closest && e.target.closest("button");
+    if (btn) return;
+
+    // ensure containerRef exists
+    if (!containerRef.current) return;
+
+    // Start dragging
     dragging.current = true;
-    const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY ?? (e.touches && e.touches[0].clientY);
+
+    // Use bounding rect to calculate offset
     const rect = containerRef.current.getBoundingClientRect();
+    const clientX = e.clientX;
+    const clientY = e.clientY;
     dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
+
+    // prevent text selection / page scroll on touch
     e.preventDefault?.();
   };
 
-  const toggleMinimize = () => {
-    setMinimized((m) => !m);
-  };
+  const toggleMinimize = () => setMinimized((m) => !m);
 
-  // Post message to iframe to control play/pause using YouTube IFrame API
   const postToPlayer = (command) => {
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentWindow) return;
@@ -104,6 +125,7 @@ export default function FloatingPlayer({ video, onClose, initialPos = { x: 20, y
     display: "flex",
     flexDirection: "column",
     userSelect: "none",
+    touchAction: "none", // important for pointer/touch dragging
   };
 
   const headerStyle = {
@@ -125,8 +147,9 @@ export default function FloatingPlayer({ video, onClose, initialPos = { x: 20, y
     >
       <div
         style={headerStyle}
-        onMouseDown={onDragStart}
-        onTouchStart={onDragStart}
+        onPointerDown={onPointerDownHeader}
+        // also support double-click to toggle minimize (nice UX)
+        onDoubleClick={() => setMinimized((m) => !m)}
       >
         <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
           {video.title?.slice(0, 30) || "YouTube"}
@@ -163,7 +186,6 @@ export default function FloatingPlayer({ video, onClose, initialPos = { x: 20, y
 
           <button
             onClick={() => {
-              // stop playback before closing
               postToPlayer("stopVideo");
               onClose && onClose();
             }}
