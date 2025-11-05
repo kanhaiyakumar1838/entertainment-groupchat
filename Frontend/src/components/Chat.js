@@ -39,22 +39,6 @@ const [autoScroll, setAutoScroll] = useState(true);
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-
-useEffect(() => {
-  if (!showMenu) return;
-  const onDocClick = (e) => {
-    // if click is outside the menu/button, close it
-    // identify the menu/button by ref if needed; simple approach:
-    if (!e.target.closest || !e.target.closest("button")) {
-      setShowMenu(false);
-      return;
-    }
-    // If you want precise detection, add refs to the button/menu and check .contains()
-  };
-  document.addEventListener("click", onDocClick);
-  return () => document.removeEventListener("click", onDocClick);
-}, [showMenu]);
-
   // Fetch messages on load
   useEffect(() => {
   const fetchMessages = async () => {
@@ -363,7 +347,7 @@ const toggleRecording = async () => {
     marginTop: 12,
     alignItems: "flex-end",
     width: "100%",
-    overflow: "visible", // prevent horizontal scroll
+    overflow: "hidden", // prevent horizontal scroll
   }}
 >
   <div style={{ position: "relative" }}>
