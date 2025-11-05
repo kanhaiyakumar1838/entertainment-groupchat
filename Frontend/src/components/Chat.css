@@ -105,7 +105,7 @@
   border: none;
 }
 
-/* textarea styles */
+/* chat textarea: light border visible always, subtle focus */
 .chat-textarea {
   flex: 1;
   padding: 8px;
@@ -114,10 +114,20 @@
   overflow-y: auto;
   min-height: 40px;
   max-height: 120px;
-  border: 1px solid transparent;
+  border: 1px solid #e6e6e6;      /* <-- light visible border always */
   font-size: 14px;
   box-sizing: border-box;
+  background: #fff;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
 }
+
+/* keep focus subtle but visible */
+.chat-textarea:focus {
+  outline: none;                  /* removes default blue outline */
+  border-color: #d0d5f0;          /* slightly darker / bluish focus color (optional) */
+  box-shadow: 0 0 0 4px rgba(78,84,200,0.06); /* faint glow */
+}
+
 
 /* microphone button */
 .mic-button {
