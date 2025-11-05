@@ -88,6 +88,39 @@ export default function Chat() {
     chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
   }, [messages]);
 
+// small helper to check if a string is a URL
+const isUrl = (s) => {
+  try {
+    new URL(s);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// choose mime from URL path or provider heuristics
+const getMimeFromUrl = (url) => {
+  if (!url) return null;
+  const path = url.split("?")[0].toLowerCase();
+  if (path.endsWith(".gif")) return "image/gif";
+  if (path.endsWith(".mp4")) return "video/mp4";
+  if (path.endsWith(".webm")) return "video/webm";
+  if (path.endsWith(".webp")) return "image/webp";
+  // common provider pages: treat them as gif by default (tenor/giphy)
+  if (url.includes("tenor.com") || url.includes("giphy.com")) return "image/gif";
+  return null;
+};
+
+// returns true if string is a direct media link we can post as media
+const isDirectMediaUrl = (s) => {
+  if (!s) return false;
+  const trimmed = s.trim();
+  if (!isUrl(trimmed)) return false;
+  return !!getMimeFromUrl(trimmed);
+};
+
+
+
   // Generic message sender
   const postMessage = async (payload) => {
     try {
@@ -105,10 +138,22 @@ export default function Chat() {
   };
 
   const sendMessage = async () => {
-    if (!text.trim()) return;
-    await postMessage({ text });
+  const trimmed = text.trim();
+  if (!trimmed) return;
+
+  // if text is a direct media URL, send it as media instead of text
+  if (isDirectMediaUrl(trimmed)) {
+    const mimetype = getMimeFromUrl(trimmed) || "image/gif"; // fallback
+    await postMessage({ text: "", media: { url: trimmed, mimetype, external: true } });
     setText("");
-  };
+    return;
+  }
+
+  // otherwise send regular text
+  await postMessage({ text: trimmed });
+  setText("");
+};
+
 
   // File upload (image/video)
   const handleFile = async (file) => {
