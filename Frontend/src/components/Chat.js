@@ -522,16 +522,19 @@ const toggleRecording = async () => {
         />
         
       )}
-      {pickerOpen && (
+{pickerOpen && (
   <EmojiGifPicker
     onEmoji={(emoji) => setText((t) => t + emoji)}
-    onGif={async (gifUrl) => {
-      console.log("Sending GIF URL:", gifUrl);
-      await postMessage({ text: "", media: { url: gifUrl, mimetype: "image/gif", external: true  } });
+    onGif={async (gifObj) => {
+      // gifObj: { url, mimetype }
+      console.log("Sending GIF object:", gifObj);
+      // send mimetype exactly so frontend will render it correctly
+      await postMessage({ text: "", media: { url: gifObj.url, mimetype: gifObj.mimetype, external: true } });
     }}
     onClose={() => setPickerOpen(false)}
   />
 )}
+
 
 {/* Floating player */}
 {floatingVideo && (
