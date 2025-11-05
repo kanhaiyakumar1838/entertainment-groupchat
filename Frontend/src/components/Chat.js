@@ -213,7 +213,7 @@ export default function Chat() {
     borderRadius: 12,
     padding: 10,
      flex: 1,  
-    //height: "62vh", // larger message area
+    height: "62vh", // larger message area
     overflowY: "auto",
     background: "#fbfbfd",
     boxSizing: "border-box",
