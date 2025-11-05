@@ -1,13 +1,17 @@
 /* Chat.css - styles extracted from Chat.js */
 
 /* container */
+/* Full-height flex container */
 .chat-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh; /* fill entire screen height */
   padding: 12px;
-  width: 100%;
-  max-width: 100vw;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
 }
+
 
 /* small header/status area (left blank in current layout) */
 .chat-header {
@@ -17,19 +21,19 @@
 }
 
 /* chat messages area */
+/* Message area grows to fill space */
 .chat-box {
+  flex: 1; /* expands automatically */
   border: 1px solid #ccc;
-  height: 380px; /* preserved from original */
+  border-radius: 8px;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px;
-  border-radius: 8px;
-  width: 100%;
   box-sizing: border-box;
   word-wrap: break-word;
-  max-width: 100vw;
   background: #fff;
 }
+
 
 /* message wrapper and each message */
 .message-wrapper { display: flex; flex-direction: column; gap: 10px; }
@@ -105,6 +109,7 @@
   border: none;
 }
 
+/* textarea styles */
 /* chat textarea: light border visible always, subtle focus */
 .chat-textarea {
   flex: 1;
@@ -127,6 +132,7 @@
   border-color: #d0d5f0;          /* slightly darker / bluish focus color (optional) */
   box-shadow: 0 0 0 4px rgba(78,84,200,0.06); /* faint glow */
 }
+
 
 
 /* microphone button */
