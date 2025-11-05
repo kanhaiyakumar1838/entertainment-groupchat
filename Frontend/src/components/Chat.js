@@ -420,20 +420,30 @@ const isDirectMediaUrl = (s) => {
         </button>
 
         <textarea
+  ref={inputRef}
   value={text}
-  onChange={async (e) => {
+  onInput={async (e) => {
     const newVal = e.target.value.trim();
-    setText(newVal);
 
-    // ✅ If user typed/pasted a GIF link, auto-send immediately
+    // ✅ Detect GIF/Media URL before React re-renders
     if (isDirectMediaUrl(newVal)) {
       const mimetype = getMimeFromUrl(newVal) || "image/gif";
+
+      // Immediately clear the input from DOM (no flicker)
+      e.target.value = "";
+      setText("");
+
+      // Send message instantly
       await postMessage({
         text: "",
         media: { url: newVal, mimetype, external: true },
       });
-      setText(""); // clear textarea instantly
+
+      return; // stop React from rendering it
     }
+
+    // For normal text, update as usual
+    setText(newVal);
   }}
   placeholder="Type a message"
   rows={1}
