@@ -1,0 +1,150 @@
+/* Chat.css - styles extracted from Chat.js */
+
+/* container */
+.chat-container {
+  padding: 12px;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* small header/status area (left blank in current layout) */
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* chat messages area */
+.chat-box {
+  border: 1px solid #ccc;
+  height: 380px; /* preserved from original */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  max-width: 100vw;
+  background: #fff;
+}
+
+/* message wrapper and each message */
+.message-wrapper { display: flex; flex-direction: column; gap: 10px; }
+.message-item { margin-bottom: 10px; }
+.message-sender { font-size: 13px; color: #333; font-weight: 700; }
+.message-time { margin-left: 8px; color: #888; font-size: 12px; font-weight: 500; }
+.message-text { margin-top: 4px; }
+
+/* media inside a message */
+.message-media { margin-top: 6px; }
+.message-media img, .message-media video { max-width: 100%; border-radius: 6px; }
+.message-media audio { width: 250px; }
+
+/* youtube card */
+.youtube-card {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.youtube-thumb { width: 120px; border-radius: 6px; }
+.youtube-title { font-weight: bold; }
+
+/* reactions row */
+.reaction-row { display: flex; gap: 12px; margin-top: 4px; font-size: 14px; }
+
+/* input area container */
+.input-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+  align-items: flex-end;
+  width: 100%;
+  overflow: visible;
+}
+
+/* plus menu */
+.plus-button { padding: 6px; border-radius: 8px; cursor: pointer; background: transparent; border: none; }
+.menu-panel {
+  position: absolute;
+  top: auto;
+  bottom: calc(100% + 14px);
+  left: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 6px;
+  z-index: 1000;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  transform-origin: bottom left;
+  min-width: 200px;
+}
+.menu-panel .menu-row { display: flex; gap: 6px; }
+
+/* menu item (replaces JS menuItemStyle) */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f6f6f6;
+  cursor: pointer;
+}
+
+/* smile/emoji button */
+.picker-button {
+  padding: 6px;
+  border-radius: 8px;
+  background: #eee;
+  cursor: pointer;
+  border: none;
+}
+
+/* textarea styles */
+.chat-textarea {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  resize: none;
+  overflow-y: auto;
+  min-height: 40px;
+  max-height: 120px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* microphone button */
+.mic-button {
+  padding: 6px;
+  border-radius: 8px;
+  background: #eee;
+  color: #333;
+  cursor: pointer;
+  border: none;
+}
+
+/* send button */
+.send-button {
+  padding: 8px;
+  background: #4e54c8;
+  color: #fff;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+/* small responsive tweaks */
+@media (max-width: 480px) {
+  .youtube-thumb { width: 100px; }
+  .chat-box { height: 60vh; }
+}
