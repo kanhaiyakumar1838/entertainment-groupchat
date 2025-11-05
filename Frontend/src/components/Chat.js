@@ -378,15 +378,19 @@ const toggleRecording = async () => {
     {showMenu && (
       <div
         style={{
-          position: "absolute",
-          top: 38,
-          left: 0,
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: 8,
-          padding: 6,
-          zIndex: 50,
-        }}
+      position: "absolute",
+      top: "auto",                // don't use top
+      bottom: "calc(100% + 8px)", // place above the button with 8px gap
+      left: 0,
+      background: "#fff",
+      border: "1px solid #ddd",
+      borderRadius: 8,
+      padding: 6,
+      zIndex: 1000,
+      boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+      transformOrigin: "bottom left",
+      minWidth: 200,
+    }}
       >
         <div style={{ display: "flex", gap: 6 }}>
           <label style={menuItemStyle}>
