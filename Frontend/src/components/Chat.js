@@ -528,12 +528,42 @@ const toggleRecording = async () => {
     onGif={async (gifObj) => {
       // gifObj: { url, mimetype }
       console.log("Sending GIF object:", gifObj);
-      // send mimetype exactly so frontend will render it correctly
-      await postMessage({ text: "", media: { url: gifObj.url, mimetype: gifObj.mimetype, external: true } });
+      // 1) Send immediate external message for snappy UX
+      await postMessage({
+        text: "",
+        media: { url: gifObj.url, mimetype: gifObj.mimetype, external: true },
+      });
+
+      // 2) In background try to download and upload to our server (non-blocking)
+      (async () => {
+        try {
+          const res = await fetch(gifObj.url);
+          if (!res.ok) throw new Error("Failed to fetch gif for upload");
+          const blob = await res.blob();
+          // create a File with proper extension if possible
+          const ext = (() => {
+            const q = gifObj.url.split("?")[0];
+            if (q.endsWith(".mp4")) return "mp4";
+            if (q.endsWith(".webp")) return "webp";
+            if (q.endsWith(".gif")) return "gif";
+            return "gif";
+          })();
+          const file = new File([blob], `gif-${Date.now()}.${ext}`, { type: gifObj.mimetype || "image/gif" });
+
+          // call your existing handleFile to upload & post the server-hosted message
+          // NOTE: handleFile posts a message itself (postMessage inside). If you want to replace the earlier external message
+          // instead of creating a duplicate, you'd need a message-edit endpoint on the server. For now this will create a second message.
+          await handleFile(file);
+        } catch (err) {
+          console.warn("Background gif upload failed:", err);
+          // ignore — we already posted external URL for user
+        }
+      })();
     }}
     onClose={() => setPickerOpen(false)}
   />
 )}
+
 
 
 {/* Floating player */}

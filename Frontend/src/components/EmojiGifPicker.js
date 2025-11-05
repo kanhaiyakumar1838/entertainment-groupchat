@@ -1,50 +1,119 @@
-import React, { useState, useEffect } from "react";
+// frontend/src/components/EmojiGifPicker.js
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import EmojiPicker from "emoji-picker-react";
 import { GiphyFetch } from "@giphy/js-fetch-api";
 
-const gf = new GiphyFetch(process.env.REACT_APP_GIPHY_KEY); // from .env
+const gf = new GiphyFetch(process.env.REACT_APP_GIPHY_KEY);
+
+function useDebouncedValue(value, delay = 300) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return v;
+}
 
 export default function EmojiGifPicker({ onEmoji, onGif, onClose }) {
   const [mode, setMode] = useState("emoji"); // emoji | gif
   const [gifs, setGifs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedTerm = useDebouncedValue(searchTerm, 300);
+  const [loading, setLoading] = useState(false);
+  const abortRef = useRef(null);
 
-  // fetch trending initially or search on input
-  const handleSearch = async (term) => {
-    setSearchTerm(term);
-    try {
-      const { data } = term
-        ? await gf.search(term, { limit: 20 })
-        : await gf.trending({ limit: 20 });
-      setGifs(data || []);
-    } catch (err) {
-      console.error("Giphy fetch error:", err);
-      setGifs([]);
-    }
+  const handleSearch = useCallback(
+    async (term) => {
+      setLoading(true);
+      // cancel previous
+      if (abortRef.current) {
+        try { abortRef.current.abort(); } catch (_) {}
+      }
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const { data } =
+          (term
+            ? await gf.search(term, { limit: 20, signal: controller.signal })
+            : await gf.trending({ limit: 20, signal: controller.signal })) || {};
+        setGifs(data || []);
+      } catch (err) {
+        if (err?.name === "AbortError") {
+          // expected when canceled
+        } else {
+          console.error("Giphy fetch error:", err);
+          setGifs([]);
+        }
+      } finally {
+        setLoading(false);
+        abortRef.current = null;
+      }
+    },
+    [setGifs]
+  );
+
+  // trigger search when mode or debouncedTerm changes
+  useEffect(() => {
+    if (mode === "gif") handleSearch(debouncedTerm);
+  }, [mode, debouncedTerm, handleSearch]);
+
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) try { abortRef.current.abort(); } catch (_) {}
+    };
+  }, []);
+
+  const pickUrl = (gif) => {
+    // Prefer a small animated preview for grid thumbnails (fast)
+    // fallback order: preview_gif, fixed_width_small, fixed_width, original
+    return (
+      gif.images?.preview_gif?.url ||
+      gif.images?.fixed_width_small?.url ||
+      gif.images?.fixed_width?.url ||
+      gif.images?.downsized?.url ||
+      gif.images?.original?.url ||
+      null
+    );
   };
 
-  // fetch trending GIFs when switching to GIF tab
-  useEffect(() => {
-    if (mode === "gif" && gifs.length === 0) {
-      handleSearch("");
+  // choose a good direct file and mimetype for sending
+  const pickBestDirect = (gif) => {
+    // order of preference for sending: downsized (gif), original (gif/webp), fixed_height (gif/mp4), preview_mp4
+    const candidates = [
+      gif.images?.downsized,
+      gif.images?.original,
+      gif.images?.fixed_height,
+      gif.images?.preview_gif,
+      gif.images?.preview,
+      gif.images?.fixed_width_small,
+    ];
+    for (const c of candidates) {
+      if (!c) continue;
+      const url = c.url || c.mp4 || c.webp || null;
+      if (url) {
+        let mimetype = "image/gif";
+        const lower = url.split("?")[0].toLowerCase();
+        if (lower.endsWith(".mp4")) mimetype = "video/mp4";
+        else if (lower.endsWith(".webm")) mimetype = "video/webm";
+        else if (lower.endsWith(".webp")) mimetype = "image/webp";
+        else if (lower.endsWith(".gif")) mimetype = "image/gif";
+        else {
+          // sniff common patterns
+          if (url.includes(".mp4") || url.includes("media.mp4")) mimetype = "video/mp4";
+          else if (url.includes("webp")) mimetype = "image/webp";
+          else mimetype = "image/gif";
+        }
+        return { url, mimetype };
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
-
-  // helper to pick the first available .url from list of image variants
-  const pickUrl = (fields) => {
-    for (const f of fields) {
-      if (!f) continue;
-      const val = f.url || f.mp4 || f.webp || f.gif || null;
-      if (val) return val;
-    }
-    return null;
+    // as ultimate fallback
+    return { url: gif.url || null, mimetype: "image/gif" };
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
       <div className="bg-white rounded-2xl p-4 w-[90%] md:w-[500px] max-h-[80vh] overflow-y-auto">
-        {/* Header Tabs */}
         <div className="flex justify-around mb-3">
           <button
             onClick={() => setMode("emoji")}
@@ -60,7 +129,6 @@ export default function EmojiGifPicker({ onEmoji, onGif, onClose }) {
           </button>
         </div>
 
-        {/* Emoji Picker */}
         {mode === "emoji" && (
           <EmojiPicker
             onEmojiClick={(emoji) => {
@@ -70,17 +138,17 @@ export default function EmojiGifPicker({ onEmoji, onGif, onClose }) {
           />
         )}
 
-        {/* GIF Picker */}
         {mode === "gif" && (
           <div>
             <input
               className="border p-2 rounded w-full mb-3"
               placeholder="Search GIFs..."
               value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
 
-            {/* GIF grid */}
+            {loading && <div style={{ padding: 8 }}>Loading GIFs…</div>}
+
             <div
               style={{
                 display: "grid",
@@ -91,59 +159,42 @@ export default function EmojiGifPicker({ onEmoji, onGif, onClose }) {
               }}
             >
               {gifs.map((gif) => {
-                // choose best direct file url
-                const url =
-                  pickUrl([
-                    gif.images?.downsized,
-                    gif.images?.downsized_medium,
-                    gif.images?.original,
-                    gif.images?.fixed_height,
-                    gif.images?.fixed_width,
-                    gif.images?.preview_gif,
-                    gif.images?.preview,
-                  ]) || gif.url || null;
-
-                // determine mimetype based on url
-                let mimetype = "image/gif";
-                if (url) {
-                  const lower = url.split("?")[0].toLowerCase();
-                  if (lower.endsWith(".mp4")) mimetype = "video/mp4";
-                  else if (lower.endsWith(".webm")) mimetype = "video/webm";
-                  else if (lower.endsWith(".webp")) mimetype = "image/webp";
-                  else if (lower.endsWith(".gif")) mimetype = "image/gif";
-                  else {
-                    // try to sniff common patterns
-                    if (url.includes(".mp4") || url.includes("media.mp4")) mimetype = "video/mp4";
-                    else if (url.includes("webp")) mimetype = "image/webp";
-                    else mimetype = "image/gif";
-                  }
-                }
-
+                const thumb = pickUrl(gif);
+                const best = pickBestDirect(gif);
                 return (
                   <div
                     key={gif.id}
                     onClick={() => {
-                      if (!url) {
-                        console.warn("No gif url found for", gif);
+                      if (!best.url) {
+                        console.warn("no direct gif url", gif);
                         return;
                       }
-                      onGif({ url, mimetype });
+                      onGif({ url: best.url, mimetype: best.mimetype });
                       onClose();
                     }}
                     style={{
                       cursor: "pointer",
                       borderRadius: 8,
                       overflow: "hidden",
-                      transition: "transform 0.2s",
+                      transition: "transform 0.15s",
+                      height: 100,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                     onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                   >
-                    <img
-                      src={gif.images?.fixed_height?.url || gif.images?.original?.url}
-                      alt={gif.title || "gif"}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
+                    {thumb ? (
+                      <img
+                        src={thumb}
+                        alt={gif.title || "gif"}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div style={{ padding: 8, fontSize: 12 }}>No preview</div>
+                    )}
                   </div>
                 );
               })}
@@ -151,11 +202,7 @@ export default function EmojiGifPicker({ onEmoji, onGif, onClose }) {
           </div>
         )}
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="mt-4 bg-gray-600 text-white w-full py-2 rounded-lg"
-        >
+        <button onClick={onClose} className="mt-4 bg-gray-600 text-white w-full py-2 rounded-lg">
           Close
         </button>
       </div>
