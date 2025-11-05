@@ -40,6 +40,7 @@ const [autoScroll, setAutoScroll] = useState(true);
 const API_URL = process.env.REACT_APP_API_URL;
 
 
+
 useEffect(() => {
   if (!showMenu) return;
   const onDocClick = (e) => {
@@ -219,7 +220,7 @@ const toggleRecording = async () => {
     width: "100%",
     maxWidth: "100vw",
     boxSizing: "border-box",
-    overflowX: "visible", // ✅ stops any horizontal scroll
+    overflowX: "hidden", // ✅ stops any horizontal scroll
   }}
 >
 
@@ -363,7 +364,7 @@ const toggleRecording = async () => {
     marginTop: 12,
     alignItems: "flex-end",
     width: "100%",
-    overflow: "hidden", // prevent horizontal scroll
+    overflow: "visible", // prevent horizontal scroll
   }}
 >
   <div style={{ position: "relative" }}>
