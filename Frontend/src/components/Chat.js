@@ -104,6 +104,103 @@ export default function Chat() {
     }
   };
 
+
+ // Paste handler + helpers (add inside Chat component scope, near handleFile / sendMessage)
+const isUrl = (s) => {
+  try {
+    new URL(s);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getMimeFromUrl = (url) => {
+  const pathname = url.split("?")[0].toLowerCase();
+  if (pathname.endsWith(".mp4")) return "video/mp4";
+  if (pathname.endsWith(".webm")) return "video/webm";
+  if (pathname.endsWith(".webp")) return "image/webp";
+  if (pathname.endsWith(".gif")) return "image/gif";
+  // fallback: if url contains mp4 or webp
+  if (url.includes(".mp4") || url.includes("media.mp4")) return "video/mp4";
+  if (url.includes("webp")) return "image/webp";
+  return null;
+};
+
+const handlePaste = async (e) => {
+  if (!e.clipboardData) return;
+  const items = Array.from(e.clipboardData.items || []);
+
+  // 1) If clipboard contains a file (image/gif), upload it directly
+  for (const item of items) {
+    if (item.kind === "file") {
+      const file = item.getAsFile();
+      if (file) {
+        e.preventDefault();
+        // file is ready — upload via your existing handleFile
+        await handleFile(file);
+        return;
+      }
+    }
+  }
+
+  // 2) If HTML with <img src="..."> exists, extract the src
+  const html = e.clipboardData.getData("text/html");
+  if (html) {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const img = doc.querySelector("img");
+      if (img && img.src) {
+        e.preventDefault();
+        const src = img.src;
+        // if src is a data: URL we can create a blob from it
+        if (src.startsWith("data:")) {
+          // convert dataURL to blob then File and upload
+          const blob = dataURLtoBlob(src);
+          const ext = src.startsWith("data:image/webp") ? "webp" : "gif";
+          const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
+          await handleFile(file);
+        } else {
+          // external URL (CDN). Send as external media quickly:
+          const mime = getMimeFromUrl(src) || "image/gif";
+          await postMessage({ text: "", media: { url: src, mimetype: mime, external: true } });
+          // Optionally: try background upload to your server (see note about CORS below)
+        }
+        return;
+      }
+    } catch (err) {
+      console.warn("HTML parse error for paste:", err);
+    }
+  }
+
+  // 3) If plain text looks like a direct url to gif/mp4/webp — send as media
+  const plain = e.clipboardData.getData("text/plain")?.trim();
+  if (plain && isUrl(plain)) {
+    const mime = getMimeFromUrl(plain);
+    if (mime) {
+      e.preventDefault();
+      await postMessage({ text: "", media: { url: plain, mimetype: mime, external: true } });
+      return;
+    }
+    // If it's a known provider page (giphy / tenor etc) — still try to send as external link OR attempt to resolve to a media URL
+    const lower = plain.toLowerCase();
+    if (lower.includes("giphy.com") || lower.includes("tenor.com") || lower.includes("media.tenor")) {
+      e.preventDefault();
+      // quick UX: send provider URL as external media; your display layer can detect provider links and show thumbnail
+      await postMessage({ text: "", media: { url: plain, mimetype: "image/gif", external: true } });
+      return;
+    }
+  }
+
+  // else: allow default paste (insert text) — don't preventDefault
+};
+
+
+
+
+
+
   const sendMessage = async () => {
     if (!text.trim()) return;
     await postMessage({ text });
@@ -375,12 +472,13 @@ export default function Chat() {
         </button>
 
         <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message"
-          rows={1}
-          className="chat-textarea"
-        />
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  onPaste={handlePaste}           // <-- add this
+  placeholder="Type a message"
+  rows={1}
+  className="chat-textarea"
+/>
 
         {/* 🎤 Microphone */}
         <button
