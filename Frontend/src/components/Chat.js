@@ -3,19 +3,19 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import PaintModal from "./PaintModal";
-import { FaPlus, FaImage, FaPaintBrush, FaYoutube, FaSmile, FaMicrophone, FaPaperPlane } from "react-icons/fa";
+import {
+  FaPlus,
+  FaImage,
+  FaPaintBrush,
+  FaYoutube,
+  FaSmile,
+  FaMicrophone,
+  FaPaperPlane,
+} from "react-icons/fa";
 import YouTubeSearchModal from "./YouTubeSearchModal";
 import EmojiGifPicker from "./EmojiGifPicker";
-
-
 import { io } from "socket.io-client";
 import FloatingPlayer from "./FloatingPlayer";
-
-
-
-
-
-
 
 export default function Chat() {
   const { groupId } = useParams();
@@ -30,92 +30,72 @@ export default function Chat() {
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
   const [pickerOpen, setPickerOpen] = useState(false);
   const [recording, setRecording] = useState(false);
-const [mediaRecorder, setMediaRecorder] = useState(null);
-const [audioChunks, setAudioChunks] = useState([]);
-const socket = useRef(null);
-const messagesEndRef = useRef(null);
-const chatContainerRef = useRef(null);
-const [autoScroll, setAutoScroll] = useState(true);
-const [floatingVideo, setFloatingVideo] = useState(null);
-// optional: initial position state
-const [floatingPos, setFloatingPos] = useState({ x: 20, y: 80 });
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const socket = useRef(null);
+  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [floatingVideo, setFloatingVideo] = useState(null);
+  const [floatingPos] = useState({ x: 20, y: 80 });
 
+  const API_URL = process.env.REACT_APP_API_URL;
 
-
-
-const API_URL = process.env.REACT_APP_API_URL;
-
-
-
-useEffect(() => {
-  if (!showMenu) return;
-  const onDocClick = (e) => {
-    // if click is outside the menu/button, close it
-    // identify the menu/button by ref if needed; simple approach:
-    if (!e.target.closest || !e.target.closest("button")) {
-      setShowMenu(false);
-      return;
-    }
-    // If you want precise detection, add refs to the button/menu and check .contains()
-  };
-  document.addEventListener("click", onDocClick);
-  return () => document.removeEventListener("click", onDocClick);
-}, [showMenu]);
+  useEffect(() => {
+    if (!showMenu) return;
+    const onDocClick = (e) => {
+      if (!e.target.closest || !e.target.closest("button")) {
+        setShowMenu(false);
+        return;
+      }
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [showMenu]);
 
   // Fetch messages on load
   useEffect(() => {
-  const fetchMessages = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/messages/${groupId}`, authHeader);
-      setMessages(res.data);
+    const fetchMessages = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/messages/${groupId}`, authHeader);
+        setMessages(res.data || []);
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+      }
+    };
+    fetchMessages();
+  }, [groupId]);
 
-    
-    } catch (err) {
-      console.error("Error fetching messages:", err);
-    }
-  };
-  fetchMessages();
-}, [groupId]);
-
-
+  // Socket setup
   useEffect(() => {
-  socket.current = io(API_URL);
+    socket.current = io(API_URL);
+    socket.current.emit("joinGroup", groupId);
+    const handler = (msg) => setMessages((prev) => [...prev, msg]);
+    socket.current.on("messageReceived", handler);
+    return () => {
+      socket.current?.off?.("messageReceived", handler);
+      socket.current?.disconnect?.();
+    };
+  }, [groupId]);
 
-  // Join the group room on socket server
-  socket.current.emit("joinGroup", groupId);
-
-  // Listen for new messages from server
-  socket.current.on("messageReceived", (msg) => {
-    setMessages((prev) => [...prev, msg]);
-  });
-
-  // Cleanup when leaving the chat
-  return () => {
-    socket.current.disconnect();
-  };
-}, [groupId]);
-
-// 🧭 Auto-scroll after messages change
-useEffect(() => {
-  if (!chatContainerRef.current) return;
-  chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-}, [messages]);
-
-
-
-
+  // Auto-scroll when messages change (respecting if user scrolled up)
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    // if user is near bottom, auto-scroll; otherwise don't disturb
+    const distanceFromBottom = container.scrollHeight - (container.scrollTop + container.clientHeight);
+    const nearBottom = distanceFromBottom < 150; // threshold
+    if (nearBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages]);
 
   // Generic message sender
   const postMessage = async (payload) => {
     try {
-      const res = await axios.post(
-        `${API_URL}/messages/${groupId}`,
-        payload,
-        authHeader
-      );
-      // setMessages((m) => [...m, res.data]);
-       // 🔥 Emit the new message to all connected users
-    socket.current.emit("newMessage", groupId, res.data);
+      const res = await axios.post(`${API_URL}/messages/${groupId}`, payload, authHeader);
+      // emit new message to room (server should broadcast back)
+      socket.current?.emit("newMessage", groupId, res.data);
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -153,7 +133,7 @@ useEffect(() => {
     setShowMenu(false);
   };
 
-  // Paint send: receives dataURL
+  // Paint send
   const handlePaintSend = async (dataUrl) => {
     const blob = dataURLtoBlob(dataUrl);
     const file = new File([blob], `drawing-${Date.now()}.png`, { type: "image/png" });
@@ -170,7 +150,7 @@ useEffect(() => {
     return new Blob([u8arr], { type: mime });
   }
 
-  // Send YouTube video
+  // Send YouTube
   const sendYouTubeVideo = async (video) => {
     await postMessage({
       text: `🎬 ${video.title}`,
@@ -183,366 +163,376 @@ useEffect(() => {
     setShowYouTubeModal(false);
   };
 
-  // 🎤 Start or stop recording audio
-const toggleRecording = async () => {
-  try {
-    if (recording && mediaRecorder) {
-      // Stop recording
-      mediaRecorder.stop();
-      setRecording(false);
-      return;
+  // Recording
+  const toggleRecording = async () => {
+    try {
+      if (recording && mediaRecorder) {
+        mediaRecorder.stop();
+        setRecording(false);
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      setMediaRecorder(recorder);
+      setAudioChunks([]);
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) setAudioChunks((prev) => [...prev, e.data]);
+      };
+
+      recorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: "audio/webm" });
+        const file = new File([blob], `audio-${Date.now()}.webm`, { type: "audio/webm" });
+        await handleFile(file);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      recorder.start();
+      setRecording(true);
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      alert("Microphone access denied or not available.");
     }
+  };
 
-    // Ask permission
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
-    setMediaRecorder(recorder);
-    setAudioChunks([]);
-
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) setAudioChunks((prev) => [...prev, e.data]);
-    };
-
-    recorder.onstop = async () => {
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
-      const file = new File([blob], `audio-${Date.now()}.webm`, { type: "audio/webm" });
-      await handleFile(file);
-      stream.getTracks().forEach((track) => track.stop());
-    };
-
-    recorder.start();
-    setRecording(true);
-  } catch (err) {
-    console.error("Microphone access error:", err);
-    alert("Microphone access denied or not available.");
-  }
-};
-
-
-  return (
-    <div
-  style={{
-    padding: 12,
+  // Small styling helpers (kept inline for quick patch)
+  const containerStyle = {
+    padding: 8,
     width: "100%",
     maxWidth: "100vw",
     boxSizing: "border-box",
-    overflowX: "hidden", // ✅ stops any horizontal scroll
-  }}
->
+    overflowX: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    height: "100%",
+  };
 
-      <h2>Group Chat</h2>
-
-      {/* Messages */}
-      <div
-  ref={chatContainerRef}
-  style={{
-    border: "1px solid #ccc",
-    height: 380,
+  const chatBoxStyle = {
+    border: "1px solid #e6e6e6",
+    borderRadius: 12,
+    padding: 10,
+    height: "62vh", // larger message area
     overflowY: "auto",
-    overflowX: "hidden", // ✅ prevent horizontal scroll
+    background: "#fbfbfd",
+    boxSizing: "border-box",
+  };
+
+  const messageWrapperStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  };
+
+  // message card style function (differentiate self vs others if you have sender id)
+  const messageCardStyle = {
+    alignSelf: "stretch",
+    background: "#fff",
+    borderRadius: 10,
+    padding: "10px 12px",
+    boxShadow: "0 1px 2px rgba(16,24,40,0.04)",
+    border: "1px solid rgba(0,0,0,0.03)",
+    wordBreak: "break-word",
+    maxWidth: "100%",
+  };
+
+  const senderStyle = { fontSize: 13, fontWeight: 700, color: "#222" };
+  const timeStyle = { marginLeft: 8, color: "#888", fontSize: 12, fontWeight: 500 };
+
+  const inputRowStyle = {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+    paddingTop: 6,
+  };
+
+  const iconButtonStyle = {
     padding: 8,
     borderRadius: 8,
-    width: "100%", // ✅ fit container
-    boxSizing: "border-box",
-    wordWrap: "break-word", // ✅ break long words
-    maxWidth: "100vw", // ✅ never overflow screen width
-  }}
->
+    background: "#fff",
+    border: "1px solid #eee",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
-        {messages.map((msg) => (
-          
-          <div key={msg._id} style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 13, color: "#333" }}>
-              <strong>{msg.sender?.username || "Unknown"}</strong>
-              <span
-                style={{ marginLeft: 8, color: "#888", fontSize: 12 }}
-              >
-                {new Date(msg.createdAt).toLocaleString()}
-              </span>
-            </div>
-
-            {msg.text && <div style={{ marginTop: 4 }}>{msg.text}</div>}
-{/* ✅ Media (image/video/audio) */}
-{msg.media && (
-  <div style={{ marginTop: msg.text ? 6 : 2 }}>
-    {msg.media.mimetype?.startsWith("image/") ? (
-      <img
-        src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
-        alt="media"
-        style={{ maxWidth: "100%", borderRadius: 6 }}
-      />
-    ) : msg.media.mimetype?.startsWith("video/") ? (
-      <video
-        controls
-        src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
-        style={{ maxWidth: "100%"}}
-      />
-    ) : msg.media.mimetype?.startsWith("audio/") ? (
-      <audio
-        controls
-        src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
-        style={{ width: 250 }}
-      />
-    ) : null}
-  </div>
-)}
-
-
-
-
-
-{msg.youtube && (
-  <div
-    onClick={() => {
-      // open floating player for this video
-      setFloatingVideo({
-        videoId: msg.youtube.videoId,
-        title: msg.youtube.title,
-        thumbnail: msg.youtube.thumbnail,
-      });
-    }}
-    style={{
-      marginTop: 6,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      cursor: "pointer",
-    }}
-    title="Click to open floating player"
-  >
-    <img
-      src={msg.youtube.thumbnail}
-      alt="thumb"
-      style={{ width: 120, borderRadius: 6 }}
-    />
-    <div>
-      <div style={{ fontWeight: "bold" }}>{msg.youtube.title}</div>
-      <a
-        href={`https://www.youtube.com/watch?v=${msg.youtube.videoId}`}
-        target="_blank"
-        rel="noreferrer"
-        onClick={(e) => e.stopPropagation()} // allow opening link without opening floating player
-      >
-        Watch on YouTube
-      </a>
-    </div>
-  </div>
-)}
-
-            {/* Reactions */}
-<div style={{ display: "flex", gap: 12, marginTop: 4, fontSize: 14 }}>
-  {["like", "heart"].map((type) => {
-    const count = msg.reactions?.filter((r) => r.type === type).length || 0;
-    const reacted = msg.reactions?.some(
-      (r) => r.type === type && r.user._id === localStorage.getItem("userId")
-    );
-    const symbol = type === "like" ? "👍" : "❤️";
-
-    return (
-      <span
-        key={type}
-        style={{
-          cursor: "pointer",
-          fontWeight: reacted ? "bold" : "normal",
-          userSelect: "none",
-        }}
-        onClick={async () => {
-          try {
-            const res = await axios.post(
-              `${API_URL}/messages/${msg._id}/react`,
-              { type },
-              authHeader
-            );
-            // Update messages locally
-            setMessages((prev) =>
-              prev.map((m) => (m._id === res.data._id ? res.data : m))
-            );
-          } catch (err) {
-            console.error("Reaction error:", err);
-          }
-        }}
-      >
-        {symbol} {count}
-      </span>
-    );
-  })}
-</div>
-
-          </div>
-        ))}
+  return (
+    <div style={containerStyle}>
+      {/* compact header: you wanted to remove title, so we show subtle room info only if needed */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {/* left intentionally empty - no big title */}
+        <div style={{ fontSize: 12, color: "#666" }} />
+        {/* small status (optional) */}
+        <div style={{ fontSize: 12, color: "#888" }}>Active</div>
       </div>
 
+      {/* Messages container */}
+      <div ref={chatContainerRef} style={chatBoxStyle}>
+        <div style={messageWrapperStyle}>
+          {messages.map((msg) => (
+            <div key={msg._id} style={messageCardStyle}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <div style={senderStyle}>{msg.sender?.username || "Unknown"}</div>
+                <div style={timeStyle}>{new Date(msg.createdAt).toLocaleString()}</div>
+              </div>
 
-<div
-  style={{
-    display: "flex",
-    gap: 4,          // slightly smaller gap
-    marginTop: 12,
-    alignItems: "flex-end",
-    width: "100%",
-    overflow: "visible", // prevent horizontal scroll
-  }}
->
-  <div style={{ position: "relative" }}>
-    <button
-      onClick={() => setShowMenu(!showMenu)}
-      style={{ padding: 6, borderRadius: 8 }}
-    >
-      <FaPlus />
-    </button>
+              {msg.text && (
+                <div style={{ marginTop: 6, fontSize: 15, lineHeight: 1.4, color: "#222" }}>
+                  {msg.text}
+                </div>
+              )}
 
-    {showMenu && (
-      <div
-        style={{
-      position: "absolute",
-      top: "auto",                // don't use top
-      bottom: "calc(100% + 14px)", // place above the button with 8px gap
-      left: 0,
-      background: "#fff",
-      border: "1px solid #ddd",
-      borderRadius: 8,
-      padding: 6,
-      zIndex: 1000,
-      boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-      transformOrigin: "bottom left",
-      minWidth: 200,
-    }}
-      >
-        <div style={{ display: "flex", gap: 6 }}>
-          <label style={menuItemStyle}>
-            <FaImage /> <div style={{ fontSize: 12 }}>Upload</div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              style={{ display: "none" }}
-              onChange={onFileChange}
-            />
-          </label>
+              {/* Media */}
+              {msg.media && (
+                <div style={{ marginTop: msg.text ? 8 : 6 }}>
+                  {msg.media.mimetype?.startsWith("image/") ? (
+                    <img
+                      src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
+                      alt="media"
+                      style={{ maxWidth: "100%", borderRadius: 8 }}
+                    />
+                  ) : msg.media.mimetype?.startsWith("video/") ? (
+                    <video
+                      controls
+                      src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
+                      style={{ maxWidth: "100%", borderRadius: 8 }}
+                    />
+                  ) : msg.media.mimetype?.startsWith("audio/") ? (
+                    <audio
+                      controls
+                      src={msg.media.external ? msg.media.url : `${API_URL}${msg.media.url}`}
+                      style={{ width: 250 }}
+                    />
+                  ) : null}
+                </div>
+              )}
 
-          <button
-            onClick={() => {
-              setPaintOpen(true);
-              setShowMenu(false);
-            }}
-            style={menuItemStyle}
-          >
-            <FaPaintBrush /> <div style={{ fontSize: 12 }}>Paint</div>
-          </button>
+              {/* YouTube */}
+              {msg.youtube && (
+                <div
+                  onClick={() => {
+                    setFloatingVideo({
+                      videoId: msg.youtube.videoId,
+                      title: msg.youtube.title,
+                      thumbnail: msg.youtube.thumbnail,
+                    });
+                  }}
+                  style={{ marginTop: 8, display: "flex", gap: 10, cursor: "pointer", alignItems: "center" }}
+                >
+                  <img src={msg.youtube.thumbnail} alt="thumb" style={{ width: 140, borderRadius: 8 }} />
+                  <div style={{ fontWeight: 700 }}>{msg.youtube.title}</div>
+                </div>
+              )}
 
-          <button
-            onClick={() => {
-              setShowYouTubeModal(true);
-              setShowMenu(false);
-            }}
-            style={menuItemStyle}
-          >
-            <FaYoutube /> <div style={{ fontSize: 12 }}>YouTube</div>
-          </button>
+              {/* Reactions */}
+              <div style={{ display: "flex", gap: 12, marginTop: 8, fontSize: 14 }}>
+                {["like", "heart"].map((type) => {
+                  const count = msg.reactions?.filter((r) => r.type === type).length || 0;
+                  const reacted = msg.reactions?.some((r) => r.type === type && r.user._id === localStorage.getItem("userId"));
+                  const symbol = type === "like" ? "👍" : "❤️";
+                  return (
+                    <span
+                      key={type}
+                      style={{
+                        cursor: "pointer",
+                        fontWeight: reacted ? "700" : "500",
+                        userSelect: "none",
+                        display: "inline-flex",
+                        gap: 6,
+                        alignItems: "center",
+                      }}
+                      onClick={async () => {
+                        try {
+                          const res = await axios.post(`${API_URL}/messages/${msg._id}/react`, { type }, authHeader);
+                          setMessages((prev) => prev.map((m) => (m._id === res.data._id ? res.data : m)));
+                        } catch (err) {
+                          console.error("Reaction error:", err);
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{symbol}</span>
+                      <span style={{ fontSize: 13, color: "#666" }}>{count}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {/* keep a small ref anchor for scroll-to-bottom */}
+          <div ref={messagesEndRef} style={{ height: 4 }} />
         </div>
       </div>
-    )}
-  </div>
 
-  <button
-    onClick={() => setPickerOpen(true)}
-    style={{
-      padding: 6,
-      borderRadius: 8,
-      background: "#eee",
-    }}
-  >
-    <FaSmile />
-  </button>
+      {/* Input row (compact) */}
+      <div style={inputRowStyle}>
+        {/* plus menu */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            style={iconButtonStyle}
+            aria-haspopup="true"
+            aria-expanded={showMenu}
+          >
+            <FaPlus />
+          </button>
 
-  <textarea
-    value={text}
-    onChange={(e) => setText(e.target.value)}
-    placeholder="Type a message"
-    rows={1}
-    style={{
-      flex: 1,
-      padding: 8,
-      borderRadius: 8,
-      resize: "none",
-      overflowY: "auto",
-      minHeight: 40,
-      maxHeight: 120,
-    }}
-  />
+          {showMenu && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "calc(100% + 10px)",
+                left: 0,
+                background: "#fff",
+                border: "1px solid #eee",
+                borderRadius: 10,
+                padding: 8,
+                boxShadow: "0 8px 24px rgba(16,24,40,0.08)",
+                zIndex: 1000,
+                display: "flex",
+                gap: 8,
+              }}
+            >
+              <label style={{ ...menuItemStyle, cursor: "pointer" }}>
+                <FaImage /> <div style={{ fontSize: 12, marginLeft: 6 }}>Upload</div>
+                <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={onFileChange} />
+              </label>
 
-  {/* 🎤 Microphone */}
-  <button
-    onClick={toggleRecording}
-    style={{
-      padding: 6,
-      borderRadius: 8,
-      background: recording ? "#ff4b4b" : "#eee",
-      color: recording ? "#fff" : "#333",
-    }}
-    title={recording ? "Stop Recording" : "Start Recording"}
-  >
-    <FaMicrophone />
-  </button>
+              <button
+                onClick={() => {
+                  setPaintOpen(true);
+                  setShowMenu(false);
+                }}
+                style={{ ...menuItemStyle }}
+              >
+                <FaPaintBrush /> <div style={{ fontSize: 12, marginLeft: 6 }}>Paint</div>
+              </button>
 
-  {/* ✅ Send icon */}
-  <button
-    onClick={sendMessage}
-    style={{
-      padding: 8,
-      background: "#4e54c8",
-      color: "#fff",
-      borderRadius: 8,
-      flexShrink: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <FaPaperPlane />
-  </button>
+              <button
+                onClick={() => {
+                  setShowYouTubeModal(true);
+                  setShowMenu(false);
+                }}
+                style={{ ...menuItemStyle }}
+              >
+                <FaYoutube /> <div style={{ fontSize: 12, marginLeft: 6 }}>YouTube</div>
+              </button>
+            </div>
+          )}
+        </div>
 
+        {/* emoji */}
+        <button onClick={() => setPickerOpen(true)} style={iconButtonStyle}>
+          <FaSmile />
+        </button>
 
-        
+        {/* textarea */}
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type a message"
+          rows={1}
+          style={{
+            flex: 1,
+            padding: "10px 12px",
+            borderRadius: 12,
+            resize: "none",
+            border: "1px solid #e6e6e6",
+            minHeight: 44,
+            maxHeight: 120,
+            fontSize: 15,
+            lineHeight: 1.3,
+            boxShadow: "inset 0 1px 2px rgba(16,24,40,0.03)",
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+        />
 
+        {/* mic */}
+        <button
+          onClick={toggleRecording}
+          style={{
+            ...iconButtonStyle,
+            background: recording ? "#ff4b4b" : "#fff",
+            color: recording ? "#fff" : "#333",
+          }}
+          title={recording ? "Stop recording" : "Record audio"}
+        >
+          <FaMicrophone />
+        </button>
+
+        {/* send */}
+        <button
+          onClick={sendMessage}
+          style={{
+            padding: 10,
+            background: "#4e54c8",
+            color: "#fff",
+            borderRadius: 12,
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <FaPaperPlane />
+        </button>
       </div>
 
-      {/* Paint Modal */}
-      <PaintModal
-        isOpen={paintOpen}
-        onClose={() => setPaintOpen(false)}
-        onSend={handlePaintSend}
-      />
+      {/* Modals & pickers */}
+      <PaintModal isOpen={paintOpen} onClose={() => setPaintOpen(false)} onSend={handlePaintSend} />
 
-      {/* YouTube Search Modal */}
-      {showYouTubeModal && (
-        <YouTubeSearchModal
-          onSelect={sendYouTubeVideo}
-          onClose={() => setShowYouTubeModal(false)}
-        />
-        
-      )}
+      {showYouTubeModal && <YouTubeSearchModal onSelect={sendYouTubeVideo} onClose={() => setShowYouTubeModal(false)} />}
+
       {pickerOpen && (
-  <EmojiGifPicker
-    onEmoji={(emoji) => setText((t) => t + emoji)}
-    onGif={async (gifUrl) => {
-      console.log("Sending GIF URL:", gifUrl);
-      await postMessage({ text: "", media: { url: gifUrl, mimetype: "image/gif", external: true  } });
-    }}
-    onClose={() => setPickerOpen(false)}
-  />
-)}
+        <EmojiGifPicker
+          onEmoji={(emoji) => setText((t) => t + emoji)}
+          onGif={async (gifObj) => {
+            console.log("Sending GIF object:", gifObj);
+            await postMessage({ text: "", media: { url: gifObj.url, mimetype: gifObj.mimetype, external: true } });
 
+            // background upload (optional)
+            (async () => {
+              try {
+                const res = await fetch(gifObj.url);
+                if (!res.ok) throw new Error("Failed to download gif for upload");
+                const blob = await res.blob();
+                const ext = (() => {
+                  const q = gifObj.url.split("?")[0].toLowerCase();
+                  if (q.endsWith(".mp4")) return "mp4";
+                  if (q.endsWith(".webp")) return "webp";
+                  if (q.endsWith(".gif")) return "gif";
+                  return "gif";
+                })();
+                const file = new File([blob], `gif-${Date.now()}.${ext}`, { type: gifObj.mimetype || "image/gif" });
+                await handleFile(file);
+              } catch (err) {
+                console.warn("Background gif upload failed:", err);
+              }
+            })();
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {/* Floating player */}
+      {floatingVideo && <FloatingPlayer video={floatingVideo} onClose={() => setFloatingVideo(null)} initialPos={floatingPos} />}
     </div>
   );
 }
 
+// menu item style
 const menuItemStyle = {
   display: "flex",
   alignItems: "center",
   gap: 6,
   padding: 8,
-  borderRadius: 6,
+  borderRadius: 8,
   background: "#f6f6f6",
   cursor: "pointer",
 };
