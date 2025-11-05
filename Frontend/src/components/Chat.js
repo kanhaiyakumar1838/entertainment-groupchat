@@ -9,6 +9,8 @@ import EmojiGifPicker from "./EmojiGifPicker";
 
 
 import { io } from "socket.io-client";
+import FloatingPlayer from "./FloatingPlayer";
+
 
 
 
@@ -34,6 +36,10 @@ const socket = useRef(null);
 const messagesEndRef = useRef(null);
 const chatContainerRef = useRef(null);
 const [autoScroll, setAutoScroll] = useState(true);
+const [floatingVideo, setFloatingVideo] = useState(null);
+// optional: initial position state
+const [floatingPos, setFloatingPos] = useState({ x: 20, y: 80 });
+
 
 
 
@@ -285,34 +291,44 @@ const toggleRecording = async () => {
 
 
 
-            {msg.youtube && (
-              <div
-                style={{
-                  marginTop: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <img
-                  src={msg.youtube.thumbnail}
-                  alt="thumb"
-                  style={{ width: 120, borderRadius: 6 }}
-                />
-                <div>
-                  <div style={{ fontWeight: "bold" }}>
-                    {msg.youtube.title}
-                  </div>
-                  <a
-                    href={`https://www.youtube.com/watch?v=${msg.youtube.videoId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Watch on YouTube
-                  </a>
-                </div>
-              </div>
-            )}
+{msg.youtube && (
+  <div
+    onClick={() => {
+      // open floating player for this video
+      setFloatingVideo({
+        videoId: msg.youtube.videoId,
+        title: msg.youtube.title,
+        thumbnail: msg.youtube.thumbnail,
+      });
+    }}
+    style={{
+      marginTop: 6,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      cursor: "pointer",
+    }}
+    title="Click to open floating player"
+  >
+    <img
+      src={msg.youtube.thumbnail}
+      alt="thumb"
+      style={{ width: 120, borderRadius: 6 }}
+    />
+    <div>
+      <div style={{ fontWeight: "bold" }}>{msg.youtube.title}</div>
+      <a
+        href={`https://www.youtube.com/watch?v=${msg.youtube.videoId}`}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => e.stopPropagation()} // allow opening link without opening floating player
+      >
+        Watch on YouTube
+      </a>
+    </div>
+  </div>
+)}
+
             {/* Reactions */}
 <div style={{ display: "flex", gap: 12, marginTop: 4, fontSize: 14 }}>
   {["like", "heart"].map((type) => {
@@ -380,7 +396,7 @@ const toggleRecording = async () => {
         style={{
       position: "absolute",
       top: "auto",                // don't use top
-      bottom: "calc(100% + 8px)", // place above the button with 8px gap
+      bottom: "calc(100% + 14px)", // place above the button with 8px gap
       left: 0,
       background: "#fff",
       border: "1px solid #ddd",
@@ -516,6 +532,16 @@ const toggleRecording = async () => {
     onClose={() => setPickerOpen(false)}
   />
 )}
+
+{/* Floating player */}
+{floatingVideo && (
+  <FloatingPlayer
+    video={floatingVideo}
+    onClose={() => setFloatingVideo(null)}
+    initialPos={floatingPos}
+  />
+)}
+
 
     </div>
   );
